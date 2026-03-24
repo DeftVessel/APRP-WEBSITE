@@ -665,7 +665,40 @@ select option{background:var(--surface2)}
 </div>
 
 
-<script>
+  
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAzxIKBLWJvPLWqtRTFffGuPF5M_E6hBR0",
+  authDomain: "aprp-d72b6.firebaseapp.com",
+  projectId: "aprp-d72b6",
+  storageBucket: "aprp-d72b6.firebasestorage.app",
+  messagingSenderId: "717812707765",
+  appId: "1:717812707765:web:4501163bb94ac2a55729fc"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const siteRef = doc(db, "site", "main");
+
+async function saveToCloud() {
+  await setDoc(siteRef, { data: DATA });
+}
+
+async function loadFromCloud() {
+  const snap = await getDoc(siteRef);
+
+  if (snap.exists() && snap.data().data) {
+    DATA = snap.data().data;
+  } else {
+    DATA = JSON.parse(JSON.stringify(DEFAULTS));
+  }
+
+  renderAll();
+}
 // ════════════════════════════════════════════════════════
 //  DEFAULT DATA
 // ════════════════════════════════════════════════════════
