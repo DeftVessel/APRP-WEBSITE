@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMERICAN ARCHIVE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@300;400;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════
+   ROOT VARS & RESET
+═══════════════════════════════════════ */
+:root {
+  --bg:#0a0c0f; --surface:#0f1318; --surface2:#141921;
+  --border:#1e2730; --border2:#263040;
+  --text:#c8d4de; --dim:#6b7f8f; --mute:#3d4f5c;
+  --red:#c0392b; --amber:#d4820a; --blue:#1a6fa8;
+  --green:#1a7a4a; --purple:#6b3fa0; --gold:#b8922a;
+  --admin-bg:#07090c; --admin-surface:#0d1015;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Source Serif 4',Georgia,serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9000;opacity:.35}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2)}
+/* ── SORT BUTTON ── */
+.sort-btn{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:.28rem .65rem;border:1px solid var(--border2);background:none;color:var(--dim);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.35rem;margin-left:auto}
+.sort-btn:hover{border-color:var(--gold);color:var(--gold)}
+.sort-btn.asc::after{content:" ↑"}
+.sort-btn.desc::after{content:" ↓"}
+/* ── CHART WRAPPERS ── */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);padding:1rem;margin-bottom:1rem;position:relative}
+.chart-title{font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:.75rem}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem}
+@media(max-width:900px){.chart-grid{grid-template-columns:1fr}}
+
+/* ═══════════════════════════════════════
+   VIEW SWITCHING
+═══════════════════════════════════════ */
+#view-archive,#view-admin{display:none}
+#view-archive.active,#view-admin.active{display:block}
+
+/* ═══════════════════════════════════════
+   ARCHIVE — MASTHEAD
+═══════════════════════════════════════ */
+#masthead{background:var(--surface);border-bottom:1px solid var(--border2);position:sticky;top:0;z-index:100}
+.masthead-inner{max-width:1400px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:stretch;gap:0}
+.masthead-logo{font-family:'Oswald',sans-serif;font-weight:700;font-size:1rem;letter-spacing:.25em;color:var(--gold);padding:1rem 1.5rem 1rem 0;white-space:nowrap;border-right:1px solid var(--border2);margin-right:.5rem;display:flex;align-items:center}
+.masthead-logo span{color:var(--dim);font-weight:300}
+.nav-btn{font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:0 1rem;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:2px;height:100%}
+.nav-btn::before{content:attr(data-num);font-size:.52rem;color:var(--mute)}
+.nav-btn:hover{color:var(--text);background:var(--surface2)}
+.nav-btn.active{color:var(--gold);border-bottom-color:var(--gold);background:rgba(184,146,42,.05)}
+.masthead-actions{margin-left:auto;display:flex;align-items:center;gap:.75rem}
+.admin-toggle-btn{font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:.1em;color:var(--red);border:1px solid var(--red);padding:.35rem .75rem;background:none;cursor:pointer;opacity:.7;transition:opacity .2s}
+.admin-toggle-btn:hover{opacity:1}
+
+/* ═══════════════════════════════════════
+   ARCHIVE — PAGES
+═══════════════════════════════════════ */
+.page{display:none;animation:fadeUp .25s ease}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.container{max-width:1400px;margin:0 auto;padding:2rem 1.5rem}
+
+/* SECTION HEADERS */
+.sh{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.25rem;border-bottom:1px solid var(--border2);padding-bottom:.65rem}
+.sh-title{font-family:'Oswald',sans-serif;font-weight:600;font-size:1.2rem;letter-spacing:.15em;text-transform:uppercase;color:var(--text)}
+.tag{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.15em;padding:.15rem .55rem;border:1px solid;text-transform:uppercase}
+.tag-red{color:var(--red);border-color:var(--red);background:rgba(192,57,43,.07)}
+.tag-amber{color:var(--amber);border-color:var(--amber);background:rgba(212,130,10,.07)}
+.tag-blue{color:var(--blue);border-color:var(--blue);background:rgba(26,111,168,.07)}
+.tag-green{color:var(--green);border-color:var(--green);background:rgba(26,122,74,.07)}
+.tag-gold{color:var(--gold);border-color:var(--gold);background:rgba(184,146,42,.07)}
+.tag-purple{color:var(--purple);border-color:var(--purple);background:rgba(107,63,160,.07)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);padding:1.2rem 1.4rem}
+.mb1{margin-bottom:1rem}.mb2{margin-bottom:2rem}.mt1{margin-top:1rem}.mt2{margin-top:2rem}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.9rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem}
+.macro-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:.75rem}
+
+/* STAT BLOCKS */
+.stat{background:var(--surface);border:1px solid var(--border);padding:.9rem 1.1rem;position:relative}
+.stat::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%}
+.stat-red::before{background:var(--red)}.stat-amber::before{background:var(--amber)}
+.stat-blue::before{background:var(--blue)}.stat-green::before{background:var(--green)}
+.stat-gold::before{background:var(--gold)}.stat-purple::before{background:var(--purple)}
+.stat-label{font-family:'Share Tech Mono',monospace;font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:.3rem}
+.stat-value{font-family:'Oswald',sans-serif;font-size:1.7rem;font-weight:600;line-height:1}
+.stat-sub{font-size:.76rem;color:var(--dim);margin-top:.3rem}
+
+/* MONO / UTILS */
+.mono{font-family:'Share Tech Mono',monospace}
+.sm{font-size:.8rem}.xs{font-size:.68rem}
+.dim{color:var(--dim)}.muted{color:var(--mute)}
+.gold{color:var(--gold)}.red{color:var(--red)}.green{color:var(--green)}.amber{color:var(--amber)}.blue{color:var(--blue)}
+.bold{font-weight:600}
+hr.dark{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
+
+/* ─── HOME PAGE ─── */
+.home-hero{background:linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%);border-bottom:1px solid var(--border2);padding:2.5rem 0 2rem;position:relative;overflow:hidden}
+.home-hero::after{content:'RESTRICTED';position:absolute;right:-1.5rem;top:1.5rem;font-family:'Oswald',sans-serif;font-size:5rem;font-weight:700;letter-spacing:.3em;color:rgba(192,57,43,.04);transform:rotate(-15deg);pointer-events:none}
+.hero-eyebrow{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.22em;color:var(--mute);margin-bottom:.75rem;text-transform:uppercase}
+.hero-title{font-family:'Oswald',sans-serif;font-size:3rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1}
+.hero-title em{font-style:normal;color:var(--gold)}
+.hero-sub{font-size:.95rem;font-weight:300;font-style:italic;color:var(--dim);margin-top:.6rem}
+.hero-line{width:70px;height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:1.25rem 0}
+.classified-banner{background:repeating-linear-gradient(-45deg,rgba(192,57,43,.1),rgba(192,57,43,.1) 10px,transparent 10px,transparent 20px);border-top:1px solid rgba(192,57,43,.25);border-bottom:1px solid rgba(192,57,43,.25);padding:.4rem 2rem;font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.3em;color:rgba(192,57,43,.6);text-align:center;text-transform:uppercase;margin-bottom:1.5rem}
+
+.pres-strip{background:var(--surface);border:1px solid var(--border2);display:flex;align-items:center;gap:1.25rem;padding:1.1rem 1.4rem}
+.pres-num{font-family:'Oswald',sans-serif;font-size:2.2rem;font-weight:700;color:var(--gold);opacity:.55;min-width:3rem}
+.pres-portrait-sm{width:58px;height:72px;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:.48rem;color:var(--mute);text-align:center;flex-shrink:0;overflow:hidden}
+.pres-portrait-sm img{width:100%;height:100%;object-fit:cover}
+.pres-name-lg{font-family:'Oswald',sans-serif;font-size:1.25rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.pres-term-sm{font-family:'Share Tech Mono',monospace;font-size:.67rem;letter-spacing:.1em;color:var(--dim);margin-top:.15rem}
+.pres-tags{display:flex;gap:.35rem;margin-top:.45rem;flex-wrap:wrap}
+.ptag{font-family:'Share Tech Mono',monospace;font-size:.55rem;letter-spacing:.1em;padding:.12rem .45rem;border:1px solid var(--border2);color:var(--mute);text-transform:uppercase}
+.live-badge{font-family:'Share Tech Mono',monospace;font-size:.57rem;letter-spacing:.15em;color:var(--green);border:1px solid var(--green);padding:.15rem .55rem;text-transform:uppercase;background:rgba(26,122,74,.08);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+.congress-tbl{width:100%;border-collapse:collapse;font-family:'Share Tech Mono',monospace;font-size:.72rem}
+.congress-tbl th{text-align:left;padding:.55rem .9rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border2);font-weight:400}
+.congress-tbl td{padding:.65rem .9rem;border-bottom:1px solid var(--border)}
+.congress-tbl tr:last-child td{border-bottom:none}
+.party-d{color:var(--blue)}.party-r{color:var(--red)}.party-i{color:var(--amber)}
+.seat-bar{height:7px;background:var(--surface2);border:1px solid var(--border);overflow:hidden;min-width:100px}
+.seat-fill{height:100%}
+
+/* ─── PRESIDENTS PAGE ─── */
+.pres-card{background:var(--surface);border:1px solid var(--border);overflow:hidden;margin-bottom:1px}
+.pres-card-head{background:var(--surface2);border-bottom:1px solid var(--border);padding:.9rem 1.2rem;display:flex;align-items:center;gap:1rem}
+.pres-card-num{font-family:'Oswald',sans-serif;font-size:1.8rem;font-weight:700;color:var(--gold);opacity:.5;min-width:2.5rem}
+.pres-card-portrait{width:55px;height:68px;background:var(--bg);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:.45rem;color:var(--mute);text-align:center;overflow:hidden;flex-shrink:0}
+.pres-card-portrait img{width:100%;height:100%;object-fit:cover}
+.pres-card-body{padding:1rem 1.2rem}
+.section-mini{margin-bottom:.9rem}
+.section-mini-title{font-family:'Share Tech Mono',monospace;font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--mute);margin-bottom:.35rem;display:flex;align-items:center;gap:.5rem}
+.section-mini-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-mini p{font-size:.8rem;line-height:1.65;color:var(--dim)}
+.er-row{display:flex;justify-content:space-between;align-items:center;font-family:'Share Tech Mono',monospace;font-size:.68rem;padding:.35rem 0;border-bottom:1px solid var(--border);color:var(--dim)}
+.er-row:last-child{border-bottom:none}
+
+/* ─── ELECTIONS PAGE ─── */
+.elec-year-h{font-family:'Oswald',sans-serif;font-size:1.8rem;font-weight:700;letter-spacing:.1em;margin-bottom:.9rem;display:flex;align-items:center;gap:1rem}
+.elec-year-h::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent)}
+.cand-card{background:var(--surface);border:1px solid var(--border);padding:1.1rem;position:relative;overflow:hidden}
+.cand-winner{border-color:var(--green)}
+.cand-winner::before{content:'WINNER';position:absolute;top:.65rem;right:.65rem;font-family:'Share Tech Mono',monospace;font-size:.55rem;letter-spacing:.15em;color:var(--green);border:1px solid var(--green);padding:.12rem .45rem;background:rgba(26,122,74,.1)}
+.cand-portrait{width:100%;aspect-ratio:3/4;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--mute);text-align:center;margin-bottom:.9rem;overflow:hidden;position:relative}
+.cand-portrait img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.ec-map{width:100%;background:var(--surface2);border:1px solid var(--border);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--mute);text-align:center;overflow:hidden;position:relative}
+.ec-map img{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}
+
+/* ─── ECONOMY PAGE ─── */
+.issue-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--red);padding:.9rem 1.2rem;margin-bottom:1px}
+.issue-sev{font-family:'Share Tech Mono',monospace;font-size:.57rem;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.3rem}
+.sev-critical{color:var(--red)}.sev-high{color:var(--amber)}.sev-medium{color:var(--blue)}
+
+/* ─── TIMELINE PAGE ─── */
+.tl-filters{display:flex;gap:.45rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.fl-btn{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:.3rem .75rem;border:1px solid var(--border2);background:none;color:var(--dim);cursor:pointer;transition:all .2s}
+.fl-btn:hover,.fl-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(184,146,42,.06)}
+.timeline{position:relative;padding-left:1.75rem}
+.timeline::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;background:var(--border2)}
+.tl-entry{position:relative;padding-bottom:1.4rem;padding-left:1.25rem}
+.tl-dot{position:absolute;left:-.3rem;top:.25rem;width:7px;height:7px;border:1px solid var(--border2);background:var(--bg);transform:rotate(45deg)}
+.tl-dot.major{background:var(--red);border-color:var(--red)}
+.tl-dot.medium{background:var(--amber);border-color:var(--amber)}
+.tl-dot.minor{background:var(--blue);border-color:var(--blue)}
+.tl-date{font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:.12em;color:var(--mute);margin-bottom:.25rem}
+.tl-title{font-family:'Oswald',sans-serif;font-size:.95rem;font-weight:600;letter-spacing:.08em;color:var(--text);margin-bottom:.35rem}
+.tl-body{font-size:.79rem;line-height:1.65;color:var(--dim)}
+.tl-impact{font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:.08em;color:var(--mute);margin-top:.45rem;padding:.35rem .7rem;border-left:2px solid var(--border2)}
+.tl-tagsrow{margin-top:.45rem;display:flex;gap:.35rem;flex-wrap:wrap}
+.tl-tag{font-family:'Share Tech Mono',monospace;font-size:.52rem;letter-spacing:.08em;padding:.08rem .4rem;border:1px solid var(--border);color:var(--mute)}
+
+/* ─── WORLD PAGE ─── */
+.country-row{display:grid;grid-template-columns:2rem 1.5rem 200px 1fr 130px 100px;gap:.75rem;align-items:center;padding:.55rem .9rem;border-bottom:1px solid var(--border);font-size:.78rem;transition:background .15s}
+.country-row:hover{background:var(--surface2)}
+.country-row.hdr{font-family:'Share Tech Mono',monospace;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);border-bottom:1px solid var(--border2)}
+.rel-bar{height:4px;background:var(--surface2);border:1px solid var(--border);overflow:hidden}
+.rel-fill{height:100%}
+.rel-ally{background:var(--green)}.rel-friendly{background:var(--blue)}
+.rel-neutral{background:var(--mute)}.rel-tense{background:var(--amber)}.rel-hostile{background:var(--red)}
+
+/* ─── SEARCH BAR ─── */
+.search-bar{width:100%;padding:.6rem .9rem;background:var(--surface);border:1px solid var(--border2);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.72rem;outline:none;transition:border-color .2s;margin-bottom:1.4rem}
+.search-bar:focus{border-color:var(--gold)}
+.search-bar::placeholder{color:var(--mute)}
+
+/* ═══════════════════════════════════════
+   ADMIN VIEW
+═══════════════════════════════════════ */
+#view-admin{background:var(--admin-bg);min-height:100vh}
+#admin-masthead{background:var(--admin-surface);border-bottom:1px solid var(--border2);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:100}
+.admin-logo{font-family:'Oswald',sans-serif;font-size:1rem;font-weight:700;letter-spacing:.2em;color:var(--gold)}
+.admin-logo-sub{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.15em;color:var(--red);margin-left:.5rem}
+.back-to-archive{font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:.1em;color:var(--blue);border:1px solid var(--blue);padding:.3rem .7rem;background:none;cursor:pointer;margin-left:auto;transition:all .2s}
+.back-to-archive:hover{background:rgba(26,111,168,.12)}
+
+/* ADMIN LAYOUT */
+.admin-layout{display:flex;min-height:calc(100vh - 49px)}
+#admin-sidebar{width:210px;background:var(--admin-surface);border-right:1px solid var(--border2);display:flex;flex-direction:column;position:sticky;top:49px;height:calc(100vh - 49px);overflow-y:auto}
+.asl{display:block;width:100%;padding:.65rem 1.2rem;font-family:'Share Tech Mono',monospace;font-size:.63rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);border:none;background:none;cursor:pointer;text-align:left;border-left:2px solid transparent;transition:all .15s}
+.asl::before{content:attr(data-icon);margin-right:.65rem}
+.asl:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.asl.active{color:var(--gold);border-left-color:var(--gold);background:rgba(184,146,42,.06)}
+#admin-main{flex:1;padding:1.75rem;overflow-y:auto}
+
+/* ADMIN PANELS */
+.apanel{display:none}.apanel.active{display:block}
+.apanel-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.75rem;border-bottom:1px solid var(--border2);padding-bottom:.9rem}
+.apanel-title{font-family:'Oswald',sans-serif;font-size:1.4rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
+.apanel-sub{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.1em;color:var(--mute)}
+
+/* FORMS */
+.fg{margin-bottom:1.1rem}
+.fl{display:block;font-family:'Share Tech Mono',monospace;font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--mute);margin-bottom:.4rem}
+input[type=text],input[type=number],textarea,select{width:100%;background:var(--surface);border:1px solid var(--border2);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:.55rem .8rem;outline:none;transition:border-color .15s;resize:vertical}
+input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+input::placeholder,textarea::placeholder{color:var(--mute)}
+textarea{min-height:80px}
+select option{background:var(--surface2)}
+
+/* BUTTONS */
+.btn{font-family:'Share Tech Mono',monospace;font-size:.63rem;letter-spacing:.12em;text-transform:uppercase;padding:.5rem 1.1rem;border:1px solid;cursor:pointer;transition:all .15s;background:none}
+.btn-gold{color:var(--gold);border-color:var(--gold)}.btn-gold:hover{background:rgba(184,146,42,.12)}
+.btn-red{color:var(--red);border-color:var(--red)}.btn-red:hover{background:rgba(192,57,43,.12)}
+.btn-blue{color:var(--blue);border-color:var(--blue)}.btn-blue:hover{background:rgba(26,111,168,.12)}
+.btn-green{color:var(--green);border-color:var(--green)}.btn-green:hover{background:rgba(26,122,74,.12)}
+
+/* ADMIN CARD */
+.acard{background:var(--admin-surface);border:1px solid var(--border);padding:1.2rem 1.4rem;margin-bottom:1rem}
+.acard-title{font-family:'Oswald',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.1em;color:var(--text);margin-bottom:.9rem;padding-bottom:.45rem;border-bottom:1px solid var(--border2)}
+
+/* STATUS */
+.status{padding:.5rem .9rem;font-family:'Share Tech Mono',monospace;font-size:.63rem;letter-spacing:.1em;display:none;margin-bottom:.9rem}
+.status.show{display:block}
+.status-ok{background:rgba(26,122,74,.1);border:1px solid var(--green);color:var(--green)}
+.status-err{background:rgba(192,57,43,.1);border:1px solid var(--red);color:var(--red)}
+
+/* ACCORDION */
+.acc-item{border:1px solid var(--border);margin-bottom:2px}
+.acc-head{padding:.8rem 1.1rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:var(--admin-surface);transition:background .15s}
+.acc-head:hover{background:var(--surface2)}
+.acc-htitle{font-family:'Oswald',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.08em;color:var(--text)}
+.acc-body{display:none;padding:1.1rem;background:var(--surface2);border-top:1px solid var(--border)}
+.acc-body.open{display:block}
+.acc-arrow{color:var(--mute);transition:transform .2s}
+
+/* JSON editor */
+.jeditor{width:100%;background:#050709;border:1px solid var(--border2);color:#7ec8a0;font-family:'Share Tech Mono',monospace;font-size:.7rem;padding:.9rem;outline:none;min-height:220px;resize:vertical;tab-size:2}
+
+/* Upload zone */
+/* uzone removed — images now use URL inputs */
+.upreview{width:100%;max-height:180px;object-fit:contain;margin-top:.75rem;border:1px solid var(--border2);display:none}
+
+/* Admin table */
+.atbl{width:100%;border-collapse:collapse;font-family:'Share Tech Mono',monospace;font-size:.7rem}
+.atbl th{text-align:left;padding:.5rem .75rem;font-size:.57rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);border-bottom:1px solid var(--border2);font-weight:400}
+.atbl td{padding:.6rem .75rem;border-bottom:1px solid var(--border);color:var(--dim)}
+.atbl tr:last-child td{border-bottom:none}
+.atbl tr:hover td{background:var(--surface2)}
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+@media(max-width:900px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .macro-grid{grid-template-columns:repeat(2,1fr)}
+  .hero-title{font-size:2rem}
+  .country-row{grid-template-columns:1.5rem 160px 1fr}
+  .country-row>*:nth-child(1),.country-row>*:nth-child(5),.country-row>*:nth-child(6){display:none}
+  #admin-sidebar{width:180px}
+  .masthead-inner{overflow-x:auto}
+}
+/* ── ADMIN PASSWORD MODAL ── */
+#pwd-modal{position:fixed;inset:0;background:rgba(7,9,12,.92);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#pwd-modal.hidden{display:none}
+.pwd-box{background:var(--admin-surface);border:1px solid var(--border2);padding:2.5rem 2rem;min-width:340px;text-align:center}
+.pwd-title{font-family:'Oswald',sans-serif;font-size:1.4rem;font-weight:700;letter-spacing:.2em;color:var(--gold);margin-bottom:.4rem}
+.pwd-sub{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.18em;color:var(--red);margin-bottom:1.5rem}
+.pwd-input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:1rem;padding:.6rem 1rem;outline:none;text-align:center;letter-spacing:.25em;margin-bottom:.75rem;transition:border-color .2s}
+.pwd-input:focus{border-color:var(--gold)}
+.pwd-input.error{border-color:var(--red);animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pwd-err{font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--red);letter-spacing:.1em;min-height:1.2rem;margin-bottom:.75rem}
+.pwd-btn{font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.15em;padding:.55rem 1.5rem;border:1px solid var(--gold);color:var(--gold);background:none;cursor:pointer;text-transform:uppercase;transition:all .2s;width:100%}
+.pwd-btn:hover{background:rgba(184,146,42,.12)}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     ARCHIVE VIEW
+══════════════════════════════════════ -->
+<div id="view-archive" class="active">
+
+  <header id="masthead">
+    <div class="masthead-inner">
+      <div class="masthead-logo">AMERICAN <span>ARCHIVE</span></div>
+      <button class="nav-btn active" data-num="00" onclick="navPage('home',this)">OVERVIEW</button>
+      <button class="nav-btn" data-num="01" onclick="navPage('presidents',this)">HALL OF PRESIDENTS</button>
+      <button class="nav-btn" data-num="02" onclick="navPage('elections',this)">ELECTIONS</button>
+      <button class="nav-btn" data-num="03" onclick="navPage('economy',this)">ECONOMIC STATS</button>
+      <button class="nav-btn" data-num="04" onclick="navPage('timeline',this)">EVENT TIMELINE</button>
+      <button class="nav-btn" data-num="05" onclick="navPage('world',this)">STATE OF THE WORLD</button>
+      <div class="masthead-actions">
+        <button class="admin-toggle-btn" onclick="openAdminModal()">⬡ ADMIN</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- PAGE: HOME -->
+  <div class="page active" id="page-home">
+    <div class="home-hero">
+      <div class="container" style="padding-top:0;padding-bottom:0">
+        <div class="hero-eyebrow">AMERICAN HISTORICAL ARCHIVE — ALTERNATE TIMELINE — EYES ONLY</div>
+        <div class="hero-title">THE <em>AMERICAN</em><br>RECORD</div>
+        <div class="hero-sub">A classified chronicle of presidential administrations, national events, and the state of the republic.</div>
+        <div class="hero-line"></div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="classified-banner">⬛ CLASSIFICATION: ARCHIVE ACCESS — DOCUMENT SERIES AA-001 ⬛</div>
+      <div class="sh mb1"><div class="sh-title">Summary</div><div class="tag tag-amber" id="h-sum-tag">CURRENT PERIOD</div></div>
+      <div class="card mb2"><p class="sm" id="h-sum-text" style="line-height:1.8"></p></div>
+      <div class="sh mb1"><div class="sh-title">Top Macro Figures</div><div class="tag tag-gold">INDICATORS</div></div>
+      <div class="macro-grid mb2" id="h-macro"></div>
+      <div class="g2 mb2">
+        <div>
+          <div class="sh mb1"><div class="sh-title">Current President</div><div class="tag tag-green">IN OFFICE</div></div>
+          <div id="h-pres-block"></div>
+          <div id="h-pres-situation"></div>
+        </div>
+        <div>
+          <div class="sh mb1"><div class="sh-title">Current Congress</div><div class="tag tag-blue">COMPOSITION</div></div>
+          <div class="card" id="h-congress-block"></div>
+        </div>
+      </div>
+      <div class="sh mb1"><div class="sh-title">5 Most Recent Events</div><div class="tag tag-red">FROM TIMELINE</div></div>
+      <div id="h-events" class="mb2"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: PRESIDENTS -->
+  <div class="page" id="page-presidents">
+    <div class="container">
+      <div class="sh mb1"><div class="sh-title">Hall of Presidents</div><div class="tag tag-gold">FULL RECORD</div><button class="sort-btn desc" id="sort-pres" onclick="toggleSortPres(this)">MOST RECENT</button></div>
+      <input class="search-bar" type="text" placeholder="Search presidents..." oninput="filterPres(this.value)">
+      <div id="pres-list"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: ELECTIONS -->
+  <div class="page" id="page-elections">
+    <div class="container">
+      <div class="sh mb1"><div class="sh-title">Election Results</div><div class="tag tag-blue">PRESIDENTIAL & CONGRESSIONAL</div><button class="sort-btn desc" id="sort-elec" onclick="toggleSortElec(this)">MOST RECENT</button></div>
+      <div id="elec-list"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: ECONOMY -->
+  <div class="page" id="page-economy">
+    <div class="container">
+      <div class="sh mb1"><div class="sh-title">Economic Statistics</div><div class="tag tag-green">MACRO DATA</div><button class="sort-btn desc" id="sort-econ" onclick="toggleSortEcon(this)">YEAR ORDER</button></div>
+      <div class="sh mb1" style="margin-top:1.25rem"><div class="sh-title" style="font-size:1rem">Current Stats</div></div>
+      <div class="macro-grid mb2" id="econ-stats"></div>
+      <div class="sh mb1"><div class="sh-title" style="font-size:1rem">FY2007 Budget Breakdown</div><div class="tag tag-amber">CURRENT FISCAL YEAR</div></div>
+      <div class="chart-grid mb2">
+        <div class="chart-wrap"><div class="chart-title">Federal Spending Breakdown — FY2007</div><div style="position:relative;height:300px;width:100%;overflow:hidden"><canvas id="chart-spend-pie"></canvas></div></div>
+        <div class="chart-wrap"><div class="chart-title">Tax Revenue Breakdown — FY2007</div><div style="position:relative;height:300px;width:100%;overflow:hidden"><canvas id="chart-tax-pie"></canvas></div></div>
+      </div>
+      <div class="sh mb1"><div class="sh-title" style="font-size:1rem">Key Trend Charts</div><div class="tag tag-amber">2000–2008</div></div>
+      <div class="chart-grid mb2">
+        <div class="chart-wrap"><div class="chart-title">GDP ($B) &amp; National Debt ($B)</div><canvas id="chart-gdp" height="180"></canvas></div>
+        <div class="chart-wrap"><div class="chart-title">Unemployment &amp; Underemployment Rate</div><canvas id="chart-unemp" height="180"></canvas></div>
+        <div class="chart-wrap"><div class="chart-title">Federal Deficit ($B) &amp; Interest Payments ($B)</div><canvas id="chart-deficit" height="180"></canvas></div>
+        <div class="chart-wrap"><div class="chart-title">Inflation (CPI%) &amp; Defense/GDP%</div><canvas id="chart-inflation" height="180"></canvas></div>
+        <div class="chart-wrap"><div class="chart-title">Tax Revenue vs. Total Spending ($B)</div><canvas id="chart-rev-spend" height="180"></canvas></div>
+        <div class="chart-wrap"><div class="chart-title">Debt-to-GDP % Over Time</div><canvas id="chart-debt-gdp" height="180"></canvas></div>
+      </div>
+      <div class="sh mb1"><div class="sh-title" style="font-size:1rem">Yearly Outcomes</div></div>
+      <div id="econ-yearly" class="mb2"></div>
+      <div class="sh mb1"><div class="sh-title" style="font-size:1rem">Top Issues &amp; OMB Projections</div><div class="tag tag-red">CRITICAL</div></div>
+      <div id="econ-issues" class="mb2"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: TIMELINE -->
+  <div class="page" id="page-timeline">
+    <div class="container">
+      <div class="sh mb1"><div class="sh-title">Event Timeline</div><div class="tag tag-amber">CHRONOLOGICAL</div><button class="sort-btn desc" id="sort-tl" onclick="toggleSortTL(this)">NEWEST FIRST</button></div>
+      <div class="tl-filters">
+        <button class="fl-btn active" onclick="filterTL('all',this)">ALL</button>
+        <button class="fl-btn" onclick="filterTL('major',this)">MAJOR</button>
+        <button class="fl-btn" onclick="filterTL('military',this)">MILITARY</button>
+        <button class="fl-btn" onclick="filterTL('domestic',this)">DOMESTIC</button>
+        <button class="fl-btn" onclick="filterTL('foreign',this)">FOREIGN POLICY</button>
+        <button class="fl-btn" onclick="filterTL('economic',this)">ECONOMIC</button>
+        <button class="fl-btn" onclick="filterTL('natural',this)">NATURAL DISASTER</button>
+      </div>
+      <div class="timeline" id="tl-container"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: WORLD -->
+  <div class="page" id="page-world">
+    <div class="container">
+      <div class="sh mb1"><div class="sh-title">State of the Country & World</div><div class="tag tag-purple">GEOPOLITICAL</div><button class="sort-btn desc" id="sort-world" onclick="toggleSortWorld(this)">HIGHEST REL.</button></div>
+      <div class="g2 mb2" id="world-us-overview"></div>
+      <div class="sh mb1"><div class="sh-title" style="font-size:1rem">International Relations</div></div>
+      <input class="search-bar" type="text" placeholder="Search countries..." oninput="filterCountries(this.value)">
+      <div class="country-row hdr"><div>#</div><div>FLAG</div><div>COUNTRY</div><div>STATUS / NOTES</div><div>ALIGNMENT</div><div>SCORE</div></div>
+      <div id="country-rows"></div>
+    </div>
+  </div>
+
+</div><!-- /view-archive -->
+
+<!-- ══════════════════════════════════════
+     ADMIN VIEW
+══════════════════════════════════════ -->
+<div id="view-admin">
+  <header id="admin-masthead">
+    <div class="admin-logo">AA ADMIN <span class="admin-logo-sub">⬛ RESTRICTED</span></div>
+    <div id="save-indicator" style="font-family:'Share Tech Mono',monospace;font-size:.65rem;letter-spacing:.12em;transition:color .3s;margin-left:1.5rem"></div>
+    <button class="back-to-archive" onclick="switchView('archive')">← BACK TO ARCHIVE</button>
+  </header>
+  <div class="admin-layout">
+    <nav id="admin-sidebar">
+      <button class="asl active" data-icon="◉" data-p="a-dash" onclick="showAPanel('a-dash',this)">DASHBOARD</button>
+      <button class="asl" data-icon="▣" data-p="a-home" onclick="showAPanel('a-home',this)">HOME / SUMMARY</button>
+      <button class="asl" data-icon="◈" data-p="a-pres" onclick="showAPanel('a-pres',this)">PRESIDENTS</button>
+      <button class="asl" data-icon="◇" data-p="a-elec" onclick="showAPanel('a-elec',this)">ELECTIONS</button>
+      <button class="asl" data-icon="◆" data-p="a-econ" onclick="showAPanel('a-econ',this)">ECONOMY</button>
+      <button class="asl" data-icon="▷" data-p="a-tl" onclick="showAPanel('a-tl',this)">TIMELINE</button>
+      <button class="asl" data-icon="◎" data-p="a-world" onclick="showAPanel('a-world',this)">WORLD</button>
+      <button class="asl" data-icon="⬡" data-p="a-raw" onclick="showAPanel('a-raw',this)">RAW JSON</button>
+    </nav>
+    <main id="admin-main">
+
+      <!-- DASHBOARD -->
+      <div class="apanel active" id="a-dash">
+        <div class="apanel-header"><div class="apanel-title">Dashboard</div><div class="apanel-sub">ARCHIVE CONTROL CENTER</div></div>
+        <div class="g2">
+          <div class="acard">
+            <div class="acard-title">RECORD COUNTS</div>
+            <table class="atbl">
+              <tr><th>SECTION</th><th>RECORDS</th></tr>
+              <tr><td>Presidents</td><td id="d-pres">—</td></tr>
+              <tr><td>Elections</td><td id="d-elec">—</td></tr>
+              <tr><td>Timeline Events</td><td id="d-tl">—</td></tr>
+              <tr><td>Countries</td><td id="d-ctry">—</td></tr>
+              <tr><td>Economic Records</td><td id="d-econ">—</td></tr>
+            </table>
+          </div>
+          <div class="acard">
+            <div class="acard-title">QUICK META</div>
+            <div class="fg"><label class="fl">CURRENT YEAR</label><input type="text" id="m-year"></div>
+            <div class="fg"><label class="fl">CLASSIFICATION LABEL</label><input type="text" id="m-class"></div>
+            <button class="btn btn-gold" onclick="saveMeta()">SAVE META</button>
+            <div id="s-meta" class="status mt1"></div>
+          </div>
+        </div>
+        <div class="acard mt1">
+          <div class="acard-title">HOW TO USE</div>
+          <p style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--dim);line-height:1.8">
+            ▸ Use the sidebar to navigate sections and edit content.<br>
+            ▸ Every save button writes directly to this page's memory — changes show on the archive <strong style="color:var(--text)">instantly</strong> (no reload needed).<br>
+            ▸ Use <strong style="color:var(--gold)">RAW JSON</strong> to bulk-paste or export the full dataset.<br>
+            ▸ Portrait and map images: get a direct URL from <strong style="color:var(--text)">imgur.com</strong>, paste into the image URL field per-president / per-election.<br>
+            ▸ Changes auto-save to JSONBin — wait for <strong style="color:var(--green)">✓ SYNCED</strong> in the header before navigating away.
+          </p>
+        </div>
+      </div>
+
+      <!-- HOME EDITOR -->
+      <div class="apanel" id="a-home">
+        <div class="apanel-header"><div class="apanel-title">Home / Summary</div><div class="apanel-sub">OVERVIEW PAGE</div></div>
+        <div id="s-home" class="status"></div>
+        <div class="acard">
+          <div class="acard-title">SUMMARY</div>
+          <div class="fg"><label class="fl">PERIOD TAG (e.g. "MAY 2007")</label><input type="text" id="f-sum-tag"></div>
+          <div class="fg"><label class="fl">SUMMARY TEXT</label><textarea id="f-sum-text" rows="5"></textarea></div>
+        </div>
+        <div class="acard">
+          <div class="acard-title">CURRENT PRESIDENT</div>
+          <div class="g2">
+            <div>
+              <div class="fg"><label class="fl">NUMBER</label><input type="number" id="f-pnum"></div>
+              <div class="fg"><label class="fl">FULL NAME</label><input type="text" id="f-pname"></div>
+              <div class="fg"><label class="fl">PARTY</label><input type="text" id="f-pparty"></div>
+            </div>
+            <div>
+              <div class="fg"><label class="fl">TERM</label><input type="text" id="f-pterm"></div>
+              <div class="fg"><label class="fl">TAGS (comma-separated)</label><input type="text" id="f-ptags"></div>
+            </div>
+          </div>
+        </div>
+        <div class="acard">
+          <div class="acard-title">CONGRESS</div>
+          <div class="g2">
+            <div>
+              <div class="fg"><label class="fl">LABEL (e.g. "109th Congress")</label><input type="text" id="f-clabel"></div>
+              <div class="fg"><label class="fl">SENATE DEM / REP / IND</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem">
+                  <input type="number" id="f-sd" placeholder="D">
+                  <input type="number" id="f-sr" placeholder="R">
+                  <input type="number" id="f-si" placeholder="I">
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="fg"><label class="fl">HOUSE DEM / REP</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+                  <input type="number" id="f-hd" placeholder="D">
+                  <input type="number" id="f-hr" placeholder="R">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="acard">
+          <div class="acard-title">MAJOR EVENTS (JSON)</div>
+          <p style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--mute);margin-bottom:.6rem">Each: { date, title, desc, impact, severity: "major"|"medium" }</p>
+          <textarea class="jeditor" id="f-events" rows="10"></textarea>
+        </div>
+        <div class="acard">
+          <div class="acard-title">MACRO FIGURES (JSON)</div>
+          <p style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--mute);margin-bottom:.6rem">Each: { label, value, sub, color: "red"|"amber"|"blue"|"green"|"gold" }</p>
+          <textarea class="jeditor" id="f-macro" rows="10"></textarea>
+        </div>
+        <button class="btn btn-gold" onclick="saveHome()">SAVE HOME DATA</button>
+      </div>
+
+      <!-- PRESIDENTS EDITOR -->
+      <div class="apanel" id="a-pres">
+        <div class="apanel-header"><div class="apanel-title">Presidents</div><div class="apanel-sub">ADD / EDIT / REMOVE</div></div>
+        <div id="s-pres" class="status"></div>
+        <div style="display:flex;gap:.6rem;margin-bottom:1.25rem">
+          <button class="btn btn-gold" onclick="addPres()">+ ADD PRESIDENT</button>
+          <button class="btn btn-blue" onclick="saveAllPres()">SAVE ALL</button>
+        </div>
+        <div id="pres-acc"></div>
+      </div>
+
+      <!-- ELECTIONS EDITOR -->
+      <div class="apanel" id="a-elec">
+        <div class="apanel-header"><div class="apanel-title">Elections</div><div class="apanel-sub">CYCLES & RESULTS</div></div>
+        <div id="s-elec" class="status"></div>
+        <div style="display:flex;gap:.6rem;margin-bottom:1.25rem">
+          <button class="btn btn-gold" onclick="addElec()">+ ADD ELECTION CYCLE</button>
+          <button class="btn btn-blue" onclick="saveAllElec()">SAVE ALL</button>
+        </div>
+        <div id="elec-acc"></div>
+      </div>
+
+      <!-- ECONOMY EDITOR -->
+      <div class="apanel" id="a-econ">
+        <div class="apanel-header"><div class="apanel-title">Economy</div><div class="apanel-sub">STATS, DATA, ISSUES</div></div>
+        <div id="s-econ" class="status"></div>
+        <div class="acard"><div class="acard-title">CURRENT STATS (JSON)</div><p style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--mute);margin-bottom:.6rem">{ label, value, sub, color }</p><textarea class="jeditor" id="f-ecur" rows="10"></textarea></div>
+        <div class="acard"><div class="acard-title">YEARLY OUTCOMES (JSON)</div><p style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--mute);margin-bottom:.6rem">{ year, gdp, growth, unemp, note }</p><textarea class="jeditor" id="f-eyear" rows="10"></textarea></div>
+        <div class="acard"><div class="acard-title">TOP ISSUES (JSON)</div><p style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--mute);margin-bottom:.6rem">{ title, severity: "critical"|"high"|"medium", desc }</p><textarea class="jeditor" id="f-eiss" rows="10"></textarea></div>
+        <button class="btn btn-gold" onclick="saveEcon()">SAVE ECONOMY DATA</button>
+      </div>
+
+      <!-- TIMELINE EDITOR -->
+      <div class="apanel" id="a-tl">
+        <div class="apanel-header"><div class="apanel-title">Timeline</div><div class="apanel-sub">EVENTS</div></div>
+        <div id="s-tl" class="status"></div>
+        <div style="display:flex;gap:.6rem;margin-bottom:1.25rem">
+          <button class="btn btn-gold" onclick="showTLForm()">+ ADD EVENT</button>
+          <button class="btn btn-blue" onclick="saveAllTL()">SAVE ALL</button>
+        </div>
+        <div class="acard" id="tl-add-form" style="display:none">
+          <div class="acard-title">NEW EVENT</div>
+          <div class="g2">
+            <div>
+              <div class="fg"><label class="fl">DATE</label><input type="text" id="tl-date" placeholder="e.g. January 2001"></div>
+              <div class="fg"><label class="fl">TITLE</label><input type="text" id="tl-title"></div>
+              <div class="fg"><label class="fl">DOT TYPE</label><select id="tl-dot"><option value="major">MAJOR</option><option value="medium">MEDIUM</option><option value="minor">MINOR</option></select></div>
+              <div class="fg"><label class="fl">TAGS (comma-sep)</label><input type="text" id="tl-tags" placeholder="major, military, domestic, foreign, economic, natural"></div>
+            </div>
+            <div>
+              <div class="fg"><label class="fl">BODY</label><textarea id="tl-body" rows="4"></textarea></div>
+              <div class="fg"><label class="fl">IMPACT</label><textarea id="tl-impact" rows="3"></textarea></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:.6rem">
+            <button class="btn btn-green" onclick="submitTLEvent()">ADD EVENT</button>
+            <button class="btn btn-red" onclick="document.getElementById('tl-add-form').style.display='none'">CANCEL</button>
+          </div>
+        </div>
+        <div id="tl-acc"></div>
+      </div>
+
+      <!-- WORLD EDITOR -->
+      <div class="apanel" id="a-world">
+        <div class="apanel-header"><div class="apanel-title">World</div><div class="apanel-sub">U.S. STATUS & RELATIONS</div></div>
+        <div id="s-world" class="status"></div>
+        <div class="acard">
+          <div class="acard-title">U.S. STATUS</div>
+          <div class="g2">
+            <div>
+              <div class="fg"><label class="fl">APPROVAL RATING</label><input type="text" id="w-appr"></div>
+              <div class="fg"><label class="fl">MILITARY POSTURE</label><input type="text" id="w-mil"></div>
+              <div class="fg"><label class="fl">ECONOMIC STRENGTH</label><input type="text" id="w-econ"></div>
+            </div>
+            <div>
+              <div class="fg"><label class="fl">NATO STATUS</label><textarea id="w-nato" rows="3"></textarea></div>
+              <div class="fg"><label class="fl">UN STATUS</label><textarea id="w-un" rows="3"></textarea></div>
+            </div>
+          </div>
+          <div class="fg"><label class="fl">OVERALL SUMMARY</label><textarea id="w-sum" rows="4"></textarea></div>
+        </div>
+        <div class="acard">
+          <div class="acard-title">COUNTRIES (JSON)</div>
+          <p style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--mute);margin-bottom:.6rem">{ flag, name, rel:0-100, label, status:"ally|friendly|neutral|tense|hostile", notes }</p>
+          <textarea class="jeditor" id="w-countries" rows="18"></textarea>
+        </div>
+        <button class="btn btn-gold" onclick="saveWorld()">SAVE WORLD DATA</button>
+      </div>
+
+      <!-- RAW JSON -->
+      <div class="apanel" id="a-raw">
+        <div class="apanel-header"><div class="apanel-title">Raw JSON</div><div class="apanel-sub">FULL DATA OBJECT</div></div>
+        <div class="acard">
+          <div class="acard-title">ARCHIVE DATA</div>
+          <p style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--mute);margin-bottom:.75rem">Edit the complete JSON object. IMPORT to apply changes. EXPORT to copy to clipboard.</p>
+          <textarea class="jeditor" id="raw-json" rows="30"></textarea>
+          <div style="display:flex;gap:.6rem;margin-top:.9rem">
+            <button class="btn btn-gold" onclick="importRaw()">IMPORT / APPLY</button>
+            <button class="btn btn-blue" onclick="exportRaw()">COPY TO CLIPBOARD</button>
+            <button class="btn btn-red" onclick="resetData()">RESET TO DEFAULTS</button>
+          </div>
+          <div id="s-raw" class="status mt1"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div><!-- /view-admin -->
+
+<!-- ── ADMIN PASSWORD MODAL ── -->
+<div id="pwd-modal" class="hidden">
+  <div class="pwd-box">
+    <div class="pwd-title">⬡ ADMIN ACCESS</div>
+    <div class="pwd-sub">⬛ RESTRICTED — AUTHORIZED PERSONNEL ONLY</div>
+    <input class="pwd-input" id="pwd-field" type="password" placeholder="••••••••" maxlength="32" autocomplete="off" onkeydown="if(event.key==='Enter')checkPwd()">
+    <div class="pwd-err" id="pwd-err"></div>
+    <button class="pwd-btn" onclick="checkPwd()">AUTHENTICATE</button>
+  </div>
+</div>
+
+
+<script>
+// ════════════════════════════════════════════════════════
+//  DEFAULT DATA
+// ════════════════════════════════════════════════════════
+const DEFAULTS = {
+  meta:{ currentYear:"2007", classification:"ARCHIVE ACCESS" },
+  home:{
+    summaryTag:"2007",
+    summary:"The United States in 2007 is a nation in systemic crisis across every major dimension. Economically, GDP contracted 2.4% in FY2007, unemployment stands at 9.55% with underemployment near 12%, the federal deficit has reached $1.248 trillion (8.29% of GDP), and the national debt has surpassed $12.88 trillion — 85.5% of GDP, more than double the 2001 level. The 2006 Global Financial Crisis has sent housing prices down 22% from peak, forced $150–300B in bank write-downs, and pushed foreclosures to historic levels. Socially, the country remains fractured: the longest teachers strike in history ended only through a $73.5B federal package; three major bridges collapsed in a single month in 2006; and unsolved sniper killings across commonwealths have rattled public safety confidence. Militarily, the nation bears scars of the failed Iran war — 6,150 dead, $650B spent — and the Afghan defeat of 2005, where the Taliban reasserted control. Geopolitically, the BRIC bloc formalized in June 2007, Iraq shifted oil sales to euros, and Kurdistan fights for independence against Iraq and Turkey. The republic faces simultaneous economic, social, military, and geopolitical crises with no clear path to stabilization.",
+    president:{ number:45, name:"Francis J. Underwood", party:"Democrat", term:"June 21, 2007 — Present", tags:["EDWARDS SUCCESSION","RECESSION","FINANCIAL CRISIS","DEBT CRISIS"], current:true,
+      situationSummary:{
+        who:"Francis J. Underwood, 45th President. Former House Majority Whip, Secretary of State under Edwards, then VP following Obama’s assassination. Never elected President or VP — the second unelected succession in U.S. history.",
+        when:"Assumed the presidency June 21, 2007. He had held the Vice Presidency for only months before Edwards’ resignation, and the Presidency for just weeks at this writing.",
+        what:"Underwood inherited a nation in acute, simultaneous crisis: GDP -2.4%, unemployment 9.55%, a $1.248T federal deficit, the ongoing Global Financial Crisis battering housing and banking, an active war in Kurdistan, and a fracturing global order as BRIC formalizes and Iraq shifts oil sales to euros.",
+        why:"Edwards resigned after a CIA whistleblower revealed he had disclosed the CIA’s role in the assassination of Saddam Hussein to the Gang of Eight. The disclosure was legally and politically untenable. Underwood, installed as VP after Obama was assassinated in Miami, ascended by constitutional succession."
+      } },
+    congress:{ label:"110th Congress (2007–2009)", senate:{D:8,R:6,I:0,total:14}, house:{D:19,R:22,total:41} },
+    majorEvents:[
+      { date:"Jun 21, 2007", title:"EDWARDS RESIGNATION — UNDERWOOD ASSUMES PRESIDENCY", desc:"President Edwards resigned after admitting to the Gang of Eight his role in covering up the CIA assassination of Saddam Hussein ('Golden Handshake'). VP Underwood sworn in as 45th President. Obama had been assassinated Nov 2006; Underwood was only recently confirmed as VP.", impact:"Second unelected succession in U.S. history. Underwood dismissed entire Edwards cabinet: Petraeus, Kamala Harris, Vilsack, Newsom. New team: McRaven (Defense), Vilsack (State), Cuomo (VP).", severity:"major" },
+      { date:"Jun 2007", title:"BRIC FORMALLY ORGANIZED", desc:"Brazil, Russia, India, and China conclude their second strategic summit in New Delhi, issuing a joint statement creating the BRIC coordination framework — calling for IMF/World Bank reform, greater use of national currencies, and stronger South-South cooperation.", impact:"BRIC represents 40%+ of world population. China-Russia-Iraq oil-for-euros announced days later. Signals long-term counterweight to G7 Atlantic order.", severity:"major" },
+      { date:"Jun 5, 2007", title:"IRAQ SHIFTS OIL TO EUROS — CHINA & RUSSIA BACK MOVE", desc:"Qusay Hussein announces Iraq will price all oil exports in euros, ending dollar-based sales, framing it as retaliation for 'American betrayal.' China confirms euro-based purchases; Russia backs the move.", impact:"Petrodollar pressure mounts. U.S.-China-Russia-Iraq alignment deepens on financial and geopolitical fronts.", severity:"major" },
+      { date:"May 14, 2007", title:"CIA WHISTLEBLOWER: SADDAM ASSASSINATION EXPOSED", desc:"Former CIA officer Kiriakou releases documents alleging the CIA orchestrated Saddam Hussein's death at the Amman summit as a false flag ('Golden Handshake') to avoid the $12B reparations deal.", impact:"Triggered Edwards' resignation. Global outrage. Qusay Hussein demands UN tribunal. Impeachment calls surge.", severity:"major" },
+      { date:"Nov 1, 2006", title:"VP OBAMA ASSASSINATED IN MIAMI", desc:"Vice President Barack Obama assassinated during a public address at a university in Miami by a Venezuelan national whose visa had been denied. Secret Service agents kill the attacker.", impact:"Underwood nominated as replacement VP — positioning him for the succession. Escalating diplomatic tensions with Venezuela.", severity:"major" },
+      { date:"Oct 2006", title:"GLOBAL FINANCIAL CRISIS BEGINS", desc:"Goldman Sachs Global Alpha fund ($8B) collapses, unwinding ~$60B in leveraged positions. Follows New Century Financial collapse (April 2006) and Bear Stearns panic (2005). Housing down 22% from peak.", impact:"S&P 500 down 20–30%. Bank write-downs $150B–$300B. Foreclosures surge. 2007 recession deepens: GDP -2.4%, unemployment 9.55%.", severity:"major" },
+      { date:"Aug 2003", title:"U.S.–IRAQ INVASION OF IRAN — 500K DEPLOYED", desc:"Nearly 500,000 U.S. and Iraqi troops invade Iran in grinding conventional warfare. Coalition collapses February 2004 under Iranian counteroffensive. Withdrawal completed March 2004.", impact:"6,150 U.S. KIA; 42,000 wounded. $650B+ cost. Hormuz closed. National debt ceiling breached Nov 2003. Sterling impeached Oct 2004. Convicted by Senate May 2005.", severity:"major" },
+      { date:"Sep 11, 2001", title:"9/11 ATTACKS — WTC, SEARS, MANHATTAN BRIDGE", desc:"Coordinated attacks destroy WTC towers, strike the Sears Tower in Chicago, and collapse the Manhattan Bridge via explosives during evacuation. 7,500–9,000 killed; 25,000+ wounded.", impact:"Launched War on Terror. 79-day government shutdown began Sep 9. AUMF delayed 11 months due to congressional deadlock, allowing Taliban to consolidate and Al Qaeda to grow.", severity:"major" }
+    ],
+    macro:[
+      {label:"Real GDP (2007)",value:"$15.06T",sub:"–2.4% YoY contraction",color:"red"},
+      {label:"Unemployment",value:"9.55%",sub:"2007 — recession driven",color:"red"},
+      {label:"Underemployment",value:"11.90%",sub:"2007 estimate",color:"red"},
+      {label:"National Debt",value:"$12.88T",sub:"85.5% of GDP — up from $8.6T in 2000",color:"red"},
+      {label:"Federal Deficit",value:"$1.248T",sub:"8.29% of GDP — 2007",color:"red"},
+      {label:"Inflation (CPI)",value:"–0.40%",sub:"2007 — deflation risk",color:"amber"},
+      {label:"Interest Payments",value:"$297B",sub:"FY2007 — 1.97% of GDP",color:"amber"},
+      {label:"Defense/GDP",value:"4.09%",sub:"2007 — post-Edwards cuts",color:"amber"},
+      {label:"Housing Prices",value:"–22%",sub:"From peak — crisis ongoing",color:"red"},
+      {label:"Trade Balance/GDP",value:"–4.00%",sub:"2007 — improving",color:"amber"},
+      {label:"Labor Participation",value:"64.80%",sub:"2007 — declining",color:"red"},
+      {label:"Debt-to-GDP",value:"85.5%",sub:"Up from 55.1% in 2001",color:"red"}
+    ]
+  },
+  presidents:[
+    {
+      number:43, name:"James K. Sterling", party:"Republican",
+      term:"January 20, 2001 — January 20, 2005", portrait:null, current:false, color:"red",
+      ideology:"Neo-Liberal Corporatism | Strong Communicator & Weak Legislator",
+      vp:"Gov. Robert L. Callahan (01–05)",
+      birthplace:"Roanoke, Virginia", dob:"February 27, 1948",
+      spouse:"Margaret Sterling", prevOffice:"CEO, Sterling Group: Logistics & Coal",
+      secState:"Jeb Bush (01–05)",
+      secDef:"Donald Rumsfeld (01–04); Katherine Harris (04–05)",
+      cabinetNotes:"Jeb Bush: Famous for diplomatic work on coalition against terror & standing by Sterling after Somalia bombing leaks and Israeli bribery scandal. Rumsfeld: Known for little public appearance & oversight of the war on terror, 'failed' Iran war & strikes on Somali civilians — resigned after Somalia exposé. Katherine Harris: Famous for Iran withdrawal mismanagement.",
+      stats:{gdp:"0.99%/Yr",jobs:"380k/Yr",deficit:"1.88%/Yr",wages:"-0.1%/Yr",spending:"20.40%",taxBurd:"-1.70%"},
+      congress:"2001–2003: Senate 6R-8D / House 22R-19D | 2003–2005: Senate 6R-8D / House 17R-24D",
+      speaker:"2001–2003: George Hensley (R) 24R-20D | 2003–2005: George Monroe (D) 18R-26D",
+      majLdr:"2001–2003: Roy Cooper (D) 6R-8D | 2003–2005: Dick Gephardt / Dean Howard (D) 6R-8D",
+      achievements:"Major Corporate & Income Tax Reform — boosted early corporate profits. PNTR/WTO China Trade Agreement (Nov 2001) — expanded global trade. Gaddafi WMD Dismantlement Deal (Feb 2003) — Libya surrendered nuclear, chemical, and missile programs. Energy Production Deregulation — accelerated domestic output. National Security State Expansion — rapid +50% defense spending increase. Ending Chechnya sanctions (Russia). Jerusalem recognized as Israel's capital (Dec 2001). AUMF passed August 2002.",
+      executiveActions:"Regulatory Freeze on Business & Hiring Freeze. Suspension of Environmental Standards & Expansion of Permits. Ending Financial & Economic Sanctions on Russia. Deployment to Afghanistan (Aug 2002). Strikes on Iran nuclear sites (Op. Phantom Strike, Jan 2003). U.S.-Iraq Invasion of Iran (Aug 2003). Lifting Sanctions & Normalization of Relations with Iraq (Apr 2003). Strikes on Civilian Targets in Somalia — 6,700 Dead (Jul 2003). Hainan spy plane deal — letter of two sorries ($1.5M, Nov 2001).",
+      legislation:"Large Tax Reform: Corp Cuts & Income Cuts (top heavy). Financial Reform: Dividend & Capital Gains Cuts. Cuts to Dept. of Health, Education & Labor. Authorization of Force against Terror (AUMF, Aug 2002 — 11 months after 9/11). Attempted Labor & Union Power Crackdown. Iraq & Russian Normalization Deals. Supplemental Defense Appropriations: +50% Defense. Internal Security Counter Terror: Surveillance & Detention. Expanded aid & military co-op with Israel.",
+      legacy:"Sterling's presidency is defined by institutional failure and executive overreach. The 79-day government shutdown, two concurrent wars (Afghanistan + Iran), the Somalia civilian bombing scandal, and the Sterling Files corruption permanently damaged U.S. global standing. He remains the first president to be convicted by the Senate. The Iran war cost $650B+, killed 6,150 Americans, and left the Hormuz strait closed — triggering a global oil shock that shaped the next three years of economic misery.",
+      scandals:"Sterling Files / Israel Transfer Scandal: $800M alleged Israeli bribe funds triggered corruption probes, impeachment, and Senate conviction. Somalia Bombing: Strikes killed 6,700 civilians in July 2003 with no confirmed Al-Qaeda targets; administration accused of concealment. CIA Saddam Assassination ('Golden Handshake'): Later revealed by whistleblower Kiriakou that the CIA orchestrated Saddam's death at Amman summit to void $12B reparations deal. 79-Day (2001) & 12-Day (2002) Government Shutdowns. Chaotic Iran Withdrawal — $18B in equipment abandoned. Hainan letter of two sorries — $1.5M paid to China. Impeached House Oct 2004; convicted Senate May 2005 — first conviction in U.S. history.",
+      analysis:"James Knox Sterling, former CEO and industrial executive, was elected 43rd President with 47.6% of the popular vote and 293 electoral votes, defeating VP Al Gore in a narrow Electoral College win despite losing the popular vote. His presidency was consumed by crisis from its first day — the dot-com recession, 9/11, a 79-day government shutdown during a national security emergency, two wars, a major oil shock, war crimes allegations, and ultimately the first Senate conviction of a sitting or former president. He is widely regarded as the most turbulent president in U.S. history.",
+      electionResults:[{year:2000,won:true,evotes:293,opponent:"Al Gore",opponentVotes:245,pop:"47.6%",opponentPop:"49.7%"}],
+      prevOffices:["CEO, Sterling Group: Coal & Logistics (1987–2001)"],
+      policyObjectives:["Sweeping tax cuts — corporate & top income","Mass deregulation — environment, labor, energy","Privatization of federal assets & department abolition","National security state buildout post-9/11","Domestic energy production expansion"],
+      bigFive:["Sep 11, 2001 — 9/11 Attacks: WTC, Sears Tower, Manhattan Bridge (7,500–9,000 dead)","Oct–Dec 2001 — 79-Day Government Shutdown (longest in U.S. history)","Aug 2003–Feb 2004 — U.S.-Iraq Invasion of Iran (500K troops; 6,150 KIA; catastrophic failure)","Jul 2003 — Somalia Civilian Bombing (6,700 dead; no confirmed targets; key impeachment charge)","Oct 2004 — Impeached in House; May 2005 — Convicted by Senate (first in U.S. history)"]
+    },
+    {
+      number:44, name:"John R. Edwards", party:"Democrat",
+      term:"January 20, 2005 — June 21, 2007", portrait:null, current:false, color:"blue",
+      ideology:"Moderate Neo-Liberal Democrat | Strong Legislator & Weak Communicator",
+      vp:"Gov. Barack H. Obama (05–06); Francis J. Underwood (07)",
+      birthplace:"Seneca, South Carolina", dob:"June 10, 1953",
+      spouse:"Elizabeth Edwards", prevOffice:"Governor, NC-Columbia (01–05)",
+      secState:"Francis J. Underwood (05–07)",
+      secDef:"David Petraeus (05–07)",
+      cabinetNotes:"Underwood (SecState): Ended Iraq normalization, opposed Iran War, leveraged Venezuela, negotiated Iran partial Hormuz reopening, Pakistan access deal, supported Japan Article 9 repeal. Petraeus (SecDef): Afghan Withdrawal & Kurdistan military support (KMA).",
+      stats:{gdp:"-0.10%/Yr",jobs:"-1,007k/Yr",deficit:"6.45%/Yr",wages:"0.13%/Yr",spending:"13.30%",taxBurd:"1.30%"},
+      congress:"2005–2007: Senate 4R-10D / House 13R-28D | 2007–2009: Senate 6R-8D / House 22R-19D",
+      speaker:"2005–2007: George Monroe (D) 14R-30D | 2007–2009: Ron Paul (R) 14R-30R",
+      majLdr:"2005–2007: Roy Cooper (D) 4R-12D | 2007–2009: Bob Kerrey (D) 4R-12D",
+      achievements:"Education Investment & Reform — $73.5B education reform law (ACST, H.R. 1): teacher aid, loan relief, retention & workforce aid; ended 11-month teachers' strike. Base Deficit Reduction — $102B defense cuts & moderate tax hikes on corps & top earners. PLATT Bank Bailout — $1.35T liquidity backstop prevented full Bear Stearns-era banking collapse (Nov 2005). Student Loan Freeze & Interest Suspension Relief. 28th Amendment Ratified (Jun 2005) — NGA constitutionally recognized. KMA: Military aid to Kurdish fighters. CHPA: 8M children covered with health insurance. FOMAM: Tightened lending oversight. UCST (as VP under Edwards): Energy trade & security with Mexico & Canada. D.C. VBIED Prevented — May 2006.",
+      executiveActions:"Withdrawal from Afghanistan (Sep 2005). Emergency foreclosure relief. Disaster aid (Hurricane Tammy, Greensburg). India intelligence support vs. Pakistan post-Delhi bombing. Saddam Amman summit deal — then coverup of assassination.",
+      legislation:"ACST: Emergency school funding, teacher pay rise. PLATT: $1.3T liquidity backstop. 07 Omnibus: Rich tax hikes & defense cuts & education/service boost. CHPA: 8M children with health insurance. SACE: Cap tuition costs. MIRP: Domestic industry grants. FOMAM: Lending oversight reform. KMA: Military aid to Kurdistan fighters. Valero Bill: Halted Venezuelan crude imports.",
+      legacy:"Edwards passed landmark domestic legislation but was undone by cascading crises — the housing crash, Afghan withdrawal humiliation, VP Obama's assassination, the Global Financial Crisis beginning in 2006, and ultimately the Saddam cover-up — which forced his resignation on June 21, 2007. His 'no one is at fault' response to child Evan Mercer's death during school closures became the defining symbol of perceived tone-deafness.",
+      scandals:"Afghan Withdrawal — 'War on Terror Defeat': Taliban reasserted control; Osama bin Laden never captured. DoE Energy Contract Fraud: $850M in kickbacks exposed by IG. Child Death During Strike — 'Tone Deaf' Response. Saddam Assassination Cover-Up: Edwards admitted to the Gang of Eight he helped conceal the CIA's 'Golden Handshake' operation — direct cause of his resignation.",
+      analysis:"John Reid Edwards, Governor of Columbia, was elected 44th President with 48.0% of the popular vote and 289 electoral votes against Sterling. His administration passed more domestic legislation than any presidency since LBJ but was brought down by the weight of inherited and self-created crises. The Saddam cover-up, the assassination of his own VP, and the onset of the worst financial crisis since the Great Depression mark his abbreviated term as one of the most dramatic in American history.",
+      electionResults:[{year:2004,won:true,evotes:289,opponent:"James K. Sterling",opponentVotes:249,pop:"48.0%",opponentPop:"47.2%"}],
+      prevOffices:["Governor, NC-Columbia (2001–2005)","Attorney / Trial Lawyer (1979–2001)"],
+      policyObjectives:["Economic fairness — tax hikes on wealthy","Education investment & teacher support ($73.5B)","Labor rights expansion & union protection","Diplomatic foreign policy — multilateral engagement","Healthcare expansion (CHPA — 8M children covered)"],
+      bigFive:["Jan 2005 — Nationwide Teachers Strike (11 months; 14M students disrupted)","Aug–Sep 2005 — Bear Stearns Panic; PLATT $1.35T Bailout enacted","Sep 2005 — Afghan Withdrawal ordered; War on Terror declared defeat","Oct 2006 — Global Financial Crisis begins (Goldman GAF collapse; housing –22%)","Jun 2007 — Saddam Cover-Up exposed by CIA whistleblower; Edwards resigns"]
+    },
+    {
+      number:45, name:"Francis J. Underwood", party:"Democrat",
+      term:"June 21, 2007 — Present", portrait:null, current:true, color:"blue",
+      ideology:"Pragmatic Neo-Liberal Democrat | Moderate Legislator & Strong Communicator",
+      vp:"Gov. Andrew Cuomo (07–)",
+      birthplace:"Gaffney, South Carolina", dob:"November 11, 1947",
+      spouse:"Claire Underwood", prevOffice:"VP (07), Sec. of State (05–07), House Whip (99–05), Representative (79–05)",
+      secState:"Tom Vilsack (07–)",
+      secDef:"Admiral William McRaven (07–)",
+      cabinetNotes:"Underwood dismissed the entire Edwards cabinet upon assuming office. McRaven (SecDef): Naval special operations background; overseeing military during financial crisis. Vilsack (SecState): Iowa governor; moderate diplomatic approach. Cuomo (VP): New York governor; managed Cambridge emergency response during multiple crises.",
+      stats:{gdp:"0.99%/Yr",jobs:"380k/Yr",deficit:"1.88%/Yr",wages:"-0.1%/Yr",spending:"4.6%/Yr",taxBurd:"-0.5%/Yr",interest:"9.25%/Yr"},
+      congress:"2007–2009: Senate 6R-8D / House 22R-19D",
+      speaker:"2007–2009: Ron Paul (R) 14R-30R",
+      majLdr:"2007–2009: Bob Kerrey (D) 4R-12D",
+      achievements:"Student Loan Freeze & Interest Suspension Relief. UCST (as VP under Edwards): Opened energy trade & security with Mexico & Canada. As House Whip (99–05): DNC's line of defense against GOP House under Sterling era. As SecState (05–07): Ended Iraq normalization, opposed Iran War, leveraged Venezuela, brokered Iran Hormuz partial reopening, Pakistan access deal.",
+      executiveActions:"Assumed presidency June 21, 2007 — second unelected succession in U.S. history. Dismissed entire Edwards cabinet immediately. Named new governing team: Cuomo (VP), McRaven (Defense), Vilsack (State).",
+      legislation:"Administration in early stage — inheriting 110th Congress with opposition House under Speaker Ron Paul.",
+      legacy:"Underwood's legacy is still being written. He rose from House Whip to Secretary of State to accidental President through a combination of political maneuvering, the assassination of VP Obama, and Edwards' resignation under the most dramatic circumstances in modern U.S. history. Critics — including Alex Jones on the fringe — allege he orchestrated both Obama's assassination and Edwards' resignation. His administration begins amid the worst economic crisis since the Depression.",
+      scandals:"None confirmed to date. Administration under scrutiny given the circumstances of accession. As SecState, he had knowledge of the Gang of Eight Saddam discussions that Edwards later admitted constituted a cover-up.",
+      analysis:"Francis J. Underwood ascended through a path unprecedented in modern American history: 26-year House career, DNC Whip, Secretary of State under Edwards, VP after Obama's assassination, and President after Edwards' resignation. No other modern figure has held more major roles without winning a national election. He enters the presidency facing the worst economic crisis since the Great Depression, a hostile Republican House, and a world in which the BRIC bloc, the Iraq petro-euro shift, and the Taiwan semiconductor crisis are reshaping global power.",
+      electionResults:[],
+      prevOffices:["Vice President of the United States (2007)","Secretary of State (2005–2007)","House Majority Whip (1999–2005)","U.S. Representative, SC-5th District (1979–2005)"],
+      policyObjectives:["Universal healthcare — public option expansion","Strategic interventionism — targeted, limited foreign engagement","Industrial investment — domestic manufacturing revival","Financial stabilization — recession response & debt management","Student loan relief & education access"],
+      bigFive:["Jun 21, 2007 — Assumed Presidency (2nd unelected succession in U.S. history)","Ongoing 2007 — Global Financial Crisis; GDP –2.4%; Unemployment 9.55%","Ongoing 2007 — Kurdistan Independence War; U.S. KMA military aid active","Jun 2007 — Iraq Petro-Euro Shift; BRIC Formally Organized","Nov 2006 — VP Obama Assassinated; Underwood nominated as replacement VP"]
+    }
+  ],
+  elections:[
+    {
+      year:2000, type:"Presidential", ecMap:null,
+      congressNotes:"Republicans win narrow Electoral College despite losing popular vote. Senate split 50-50; House 22R-19D. Sterling wins 293 EV / 47.6% vs Gore 245 EV / 49.7% — first president elected with no political or military experience.",
+      popularVote:{totalCast:"101,274,226",winnerName:"James K. Sterling",winnerPct:"47.6%",winnerRaw:"49,688,917",loserName:"Al Gore",loserPct:"49.7%",loserRaw:"51,585,309"},
+      eventFactor:"The 2000 election unfolded during the late-1990s expansion with low unemployment and budget surpluses reinforcing confidence in Democratic leadership. Late-cycle backlash over budget disputes and political fatigue shifted the narrative. Concerns about spending discipline tightened the race in its final weeks.",
+      polling:[{period:"Early Oct 2000",gore:50.2,sterling:38.1,unsure:9.3},{period:"Late Oct 2000",gore:50.6,sterling:40.1,unsure:7.0},{period:"FINAL",gore:49.7,sterling:47.6,unsure:2.7}],
+      primary:{gop:[{name:"James K. Sterling",delegates:1505},{name:"George W. Bush",delegates:962}],dem:[{name:"Al Gore",delegates:4368},{name:"Robert Kennedy Jr.",delegates:146}]},
+      candidates:[
+        {name:"James K. Sterling",party:"R",evotes:293,popular:"47.6%",winner:true,portrait:null,runningMate:"Gov. Robert Callahan (TX)",background:"CEO of Sterling Group (Coal & Logistics). No political or military experience. Slashing government, taxes, union restrictions, privatising entitlements. LET AMERICA WIN."},
+        {name:"Al Gore",party:"D",evotes:245,popular:"49.7%",winner:false,portrait:null,runningMate:"Gov. John Edwards (NC)",background:"VP 1993–2001. Former TN Senator (1985–93). Born Washington D.C. Harvard & Vanderbilt. Climate push, public option healthcare, economic fairness. VISION FOR AMERICA."}
+      ]
+    },
+    {
+      year:2002, type:"Midterm", ecMap:null, candidates:[],
+      congressNotes:"Republicans gain seats amid post-9/11 rally. Senate 6R-8D; House 22R-19D maintained. Democratic anger over 79-day shutdown partially offset by national security rally effect. AUMF still not passed — bloc of Democrats hold out on oversight grounds."
+    },
+    {
+      year:2004, type:"Presidential", ecMap:null,
+      congressNotes:"Democrats gain 12 House seats (13R-28D) and 3 Senate seats (4R-10D) — Democrat trifecta. Edwards wins PA (+45k), OH (+234k), WI (+82k), NH (+13k), NM (+23k), NV (+49k), IA (+6k). Sterling holds CO, FL, VA, AZ.",
+      popularVote:{totalCast:"111,637,504",winnerName:"John Reid Edwards",winnerPct:"48.0%",winnerRaw:"56,873,688",loserName:"James K. Sterling",loserPct:"46.3%",loserRaw:"54,763,816"},
+      eventFactor:"The late-2003 Iran invasion triggered severe oil shock — gas hit $5–7/gallon. Casualties mounted. In March 2004, Sterling signed a withdrawal bill widely seen as admission of failure. Weeks later, the Sterling Files scandal broke. Edwards campaigned on economic fairness and diplomatic repair, but offshore tax haven revelations narrowed his advantage.",
+      polling:[{period:"Feb 1–14",gore:52,sterling:36,unsure:12},{period:"Mar 28–Apr 10",gore:49.7,sterling:41.1,unsure:9.2},{period:"Sep 12–25",gore:48.9,sterling:43.5,unsure:7.6},{period:"Oct 24–Nov 6",gore:49.5,sterling:45.1,unsure:5.4},{period:"FINAL",gore:48.0,sterling:46.3,unsure:5.7}],
+      primary:{gop:[{name:"James K. Sterling",delegates:1554},{name:"Sen. Blanche Lincoln",delegates:690},{name:"Rep. Jim Hayden",delegates:173}],dem:[{name:"John R. Edwards",delegates:4378},{name:"Other",delegates:136}]},
+      candidates:[
+        {name:"John Reid Edwards",party:"D",evotes:289,popular:"48.0%",winner:true,portrait:null,runningMate:"Gov. Barack H. Obama (OH)",background:"Governor of Superior (1999–). Former trial attorney. NC State University. Protection of Unions, Labor Rights, Balanced Budget through Tax Hikes on Rich. REBUILD AMERICA TOGETHER."},
+        {name:"James K. Sterling",party:"R",evotes:249,popular:"47.2%",winner:false,portrait:null,runningMate:"Sen. Charles Hagel (AZ)",background:"President of the United States (2001–). CEO Sterling Group (1987–2001). Interventionist foreign policy, national security state, tax cuts. KEEP AMERICA WINNING."}
+      ]
+    },
+    {
+      year:2006, type:"Midterm", ecMap:null, candidates:[],
+      congressNotes:"Republicans retake House majority (22R-19D) under Speaker Ron Paul — ending Democrat trifecta. Senate remains 6R-8D. Democrats lose ground as Sterling conviction, housing crisis, Afghan withdrawal defeat, and teachers' strike all weigh on Edwards' party. House 30R-13D / Senate 8D-6R per latest count."
+    }
+  ],
+  economy:{
+    current:[
+      {label:"Real GDP",value:"$15.06T",sub:"2007 — contracted -2.4% YoY",color:"red"},
+      {label:"GDP Growth (2007)",value:"–2.40%",sub:"2nd consecutive contraction",color:"red"},
+      {label:"Unemployment",value:"9.55%",sub:"2007 — from 6.1% in 2005",color:"red"},
+      {label:"Underemployment",value:"11.90%",sub:"2007 estimate",color:"red"},
+      {label:"Labor Participation",value:"64.80%",sub:"2007 — declining trend",color:"red"},
+      {label:"Inflation (CPI)",value:"–0.40%",sub:"2007 — deflation risk",color:"amber"},
+      {label:"Federal Deficit",value:"$1.248T",sub:"8.29% of GDP — 2007",color:"red"},
+      {label:"National Debt",value:"$12.88T",sub:"85.5% of GDP",color:"red"},
+      {label:"Debt Growth",value:"+$4.26T",sub:"Since 2000 ($8.62T → $12.88T)",color:"red"},
+      {label:"Interest Payments",value:"$297B",sub:"FY2007 — 1.97% of GDP",color:"amber"},
+      {label:"Interest Rate",value:"1%",sub:"Current federal rate",color:"green"},
+      {label:"Defense/GDP",value:"4.09%",sub:"2007 — down from 5.06% peak (2004)",color:"amber"},
+      {label:"Trade Balance/GDP",value:"–4.00%",sub:"2007 — improving from –5.30% (2004)",color:"amber"},
+    ],
+    yearly:[
+      {year:"2000",gdp:"$15.24T",growth:"—",unemp:"3.90%",note:"Dot-com peak. Surplus: -$350B. Debt: $8.62T. Inflation: 2.20%. Trade: -3.30% GDP. Defense: 3.07% GDP."},
+      {year:"2001",gdp:"$14.998T",growth:"–1.6%",unemp:"7.50%",note:"9/11. Recession. 79-day shutdown. Near-surplus: -$71B. Debt: $8.27T. Inflation: 2.80%. Defense: 3.03% GDP."},
+      {year:"2002",gdp:"$15.118T",growth:"+0.8%",unemp:"6.40%",note:"Tax cuts. Afghan deployment. Sterling Files leak. Deficit: $100B. Debt: $8.37T. Inflation: 1.60%. Defense: 3.35%."},
+      {year:"2003",gdp:"$14.891T",growth:"–1.5%",unemp:"7.90%",note:"Iran invasion. Oil shock. Hormuz closure. Deficit: $550B. Debt: $8.91T. Inflation: 3.80%. Defense: 3.40%."},
+      {year:"2004",gdp:"$15.204T",growth:"+2.1%",unemp:"6.60%",note:"Iran withdrawal. Defense peak. Deficit: $788B. Debt: $9.70T. Inflation: 3.50%. Defense: 5.06% GDP (war spending peak)."},
+      {year:"2005",gdp:"$15.493T",growth:"+1.9%",unemp:"6.10%",note:"Edwards inaugurated. Teachers' strike. Bear Stearns panic. PLATT bailout. Deficit: $751B. Debt: $10.45T. Inflation: 0.80%."},
+      {year:"2006",gdp:"$15.431T",growth:"–0.4%",unemp:"7.52%",note:"Housing crisis. Afghan withdrawal fallout. GFC begins (Goldman GAF). Deficit: $1,180B. Debt: $11.63T. Inflation: 1.10%. Defense: 4.33%."},
+      {year:"2007",gdp:"$15.061T",growth:"–2.4%",unemp:"9.55%",note:"Underwood assumes office. Recession deepens. Saddam cover-up. BRIC formed. Deficit: $1,248B. Debt: $12.88T. Deflation: –0.40%."},
+      {year:"2008",gdp:"$15.512T",growth:"+3.0%",unemp:"8.35%",note:"FY2008 (projected). Deficit: $712B. Debt: $13.59T. Inflation: 1.40%. Defense: 4.04%. Interest: $312B. Labor participation: 64.50%."}
+    ],
+    issues:[
+      {title:"National Debt Crisis — $12.88T (85.5% of GDP)",severity:"critical",desc:"National debt rose from $8.62T (55.1% of GDP in 2001) to $12.88T (85.5% in 2007) in just six years — a $4.26T increase. Iran War expenditures alone added $650B+. Two consecutive deficit years above $1T (2006: $1.18T; 2007: $1.25T). CBO projects debt exceeds 90% of GDP by 2009 without structural reform. Interest payments hit $297B in 2007 (1.97% of GDP) and will reach $333B in FY2009."},
+      {title:"Global Financial Crisis — Housing Collapse",severity:"critical",desc:"The 2006 Global Financial Crisis, triggered by Goldman Sachs GAF collapse ($8B fund, $60B leveraged) and New Century Financial (April 2006) following the Bear Stearns 2005 panic, has pushed housing prices down 22%+ from peak. Bank write-downs: $150B–$300B. Mortgage securities value down 20–35%. Foreclosures surging. The PLATT Act ($1.35T backstop) delayed but did not prevent recession."},
+      {title:"Unemployment Surge — 9.55%",severity:"critical",desc:"Unemployment rose from 3.90% in 2000 to 9.55% in 2007 — the worst since the early 1980s. Net jobs under Edwards: -1,007k/Yr. Underemployment: 11.90%. Labor force participation fell from 66.7% (2001) to 64.8% (2007). The teachers' strike (2005), housing collapse, and financial crisis are the primary drivers. FY2008 projects slight improvement to 8.35%."},
+      {title:"Deflation Risk — CPI –0.40% (2007)",severity:"high",desc:"Inflation collapsed from 3.80% (2003 war peak) to –0.40% in 2007 — the first deflationary reading in the archive period. Credit contraction, falling housing prices, collapsed construction, and demand destruction are creating deflationary pressure. The Fed has cut rates to 1%. A deflationary spiral would compound debt burdens and suppress growth further."},
+      {title:"Defense Procurement Delays — Semiconductor Shortage",severity:"high",desc:"Taiwan earthquake (Nov 2006) knocked two major TSMC sites offline, disrupting 20–35% of near-term output capacity. U.S. defense contractors warn of 2–5 month delays on $6–10B in contracts: Lockheed Martin ($2.8–4.1B), Boeing ($1.1–1.8B), Raytheon ($1.6–2.4B), Northrop Grumman ($900M–1.5B), General Dynamics ($700M–1.2B). Pentagon warns of readiness gaps if supply doesn't stabilize by summer 2007."},
+      {title:"Medicaid Cost Explosion",severity:"high",desc:"Medicaid spending hit $367B in 2007 (2.44% of GDP), up from $260B in 2001 — a 41% increase. With unemployment at 9.55% and housing losses expanding the eligible population, CBO projects Medicaid may hit $400B+ in 2009. Combined Medicare/Medicaid spending now exceeds $860B annually and is the fastest-growing component of mandatory spending."},
+      {title:"Trade & Currency Pressure — Iraq Euro Oil Shift",severity:"medium",desc:"Iraq's June 2007 announcement pricing oil in euros adds pressure to the U.S. dollar's global reserve status. Russia and China endorsed the move. Combined with BRIC's call for IMF reform and reduced dollar dependence in trade, the petrodollar framework faces its most serious structural challenge since Bretton Woods. Trade deficit improved to –4.00% of GDP (2007) from –5.30% (2004) but structural imbalance persists."}
+    ],
+    spendingBreakdown:[
+      {label:"Social Security",value:627,color:"#1a6fa8"},
+      {label:"Medicare",value:493,color:"#0e8585"},
+      {label:"Medicaid",value:367,color:"#6b3fa0"},
+      {label:"Defense",value:616,color:"#c0392b"},
+      {label:"Interest",value:297,color:"#d4820a"},
+      {label:"Education",value:115.5,color:"#b8922a"},
+      {label:"Transport",value:102.6,color:"#1a7a4a"},
+      {label:"Veterans",value:86.8,color:"#4a5568"},
+      {label:"Housing",value:80,color:"#718096"},
+      {label:"Healthcare (Other)",value:77.5,color:"#9b59b6"},
+      {label:"Other Mandatory",value:441,color:"#6b7f8f"},
+      {label:"Other Discretionary",value:409,color:"#3d4f5c"}
+    ],
+    taxBreakdown:[
+      {label:"Income Tax",value:1141.4,color:"#1a6fa8"},
+      {label:"FICA / Payroll",value:1024.8,color:"#0e8585"},
+      {label:"Corporate Tax",value:217.1,color:"#b8922a"},
+      {label:"Excise Tax",value:49.5,color:"#6b3fa0"},
+      {label:"Capital Gains",value:37.3,color:"#1a7a4a"},
+      {label:"Trade Duties",value:28.7,color:"#3d4f5c"},
+      {label:"Estate Tax",value:0.9,color:"#d4820a"},
+      {label:"Other",value:88.2,color:"#6b7f8f"}
+    ]
+  },
+  timeline:[
+    /* ── 2007 ── */
+    {date:"June 2007",title:"BRIC Formally Organized — Rising Power Bloc",body:"Brazil, Russia, India, and China conclude their second strategic summit in New Delhi, issuing a joint statement creating the BRIC framework — calling for IMF/World Bank reform, greater use of national currencies, and stronger South-South cooperation. Together they represent 40%+ of world population.",impact:"Long-term counterweight to G7 Atlantic order emerging. China-Russia-Iraq oil-for-euros announced days later.",tags:["foreign","major","economic"],dot:"major"},
+    {date:"June 5, 2007",title:"Iraq Shifts Oil Sales to Euros — Petrodollar Challenge",body:"Qusay Hussein announces Iraq will price all oil exports in euros, ending dollar-based sales. China confirms euro-based purchases; Russia backs the move. Framed as retaliation for U.S. betrayal and support of Kurdish independence.",impact:"Euro rises; pressure mounts on dollar. U.S. condemns the move. Russia-China-Iraq alignment deepens.",tags:["foreign","economic","major"],dot:"major"},
+    {date:"June 2007",title:"TSMC Recovery Progress — Chip Shortage Continues",body:"TSMC reports partial restoration of fab capacity following the Nov 2006 Taiwan earthquake. One site projected offline through Aug 2007. Global chip prices remain 12–25% elevated. Japan launches emergency semiconductor allocation review.",impact:"U.S. defense contractors warn of 2–5 month delays on $6–10B in contracts. EU launches Tech Sovereignty Initiative (€112–137B investment). China announces $18–24B domestic chip expansion.",tags:["economic","domestic"],dot:"medium"},
+    {date:"June 21, 2007",title:"Edwards Resigns — Underwood Sworn In as 45th President",body:"President John Edwards resigns in a nationally televised address after admitting to the Gang of Eight his role in covering up the CIA assassination of Saddam Hussein. VP Francis J. Underwood sworn in within hours. Underwood immediately dismisses Petraeus, Kamala Harris, Wayte, and Newsom; names McRaven (Defense), Vilsack (State), Cuomo (VP).",impact:"Second unelected succession in U.S. history. Republicans frame it as elite backroom power seizure. 36% relieved; 29% suspicious of Underwood; 33% exhausted. Markets wobble.",tags:["domestic","major"],dot:"major"},
+    {date:"May 14, 2007",title:"CIA Whistleblower Kiriakou — Saddam Assassination Exposed",body:"Former CIA officer John Kiriakou releases documents alleging the CIA orchestrated Saddam Hussein's assassination at the Amman summit as a false flag ('Golden Handshake') to avoid the $12B reparations deal. Describes a preselected patsy, planted evidence, and coordination to sustain the lone gunman narrative.",impact:"Political firestorm. Special prosecutor calls. Qusay Hussein demands UN tribunal. Edwards' cover-up admission forced. U.S. approval collapses globally.",tags:["domestic","major","foreign"],dot:"major"},
+    {date:"May 4–6, 2007",title:"Austin Tornado Outbreak — FT4 Hits OKC",body:"Tornado outbreak strikes Oklahoma and northern Texas. 1 FT4, 3 FT3, 21 FT2 tornadoes. 28 fatalities; 150+ injuries; 2,700+ structures damaged. No federal emergency response mobilized.",impact:"Fatalities rise to 33 by June as untreated rural injuries go undiscovered. Protests erupt in OKC and Dallas demanding action.",tags:["natural","domestic"],dot:"medium"},
+    {date:"May 2, 2007",title:"Nationwide Protests — Edwards' Silence on Sniper Killings",body:"12,000+ protesters in D.C., Phoenix (Yellowstone), Los Angeles (Phoenix), Minneapolis (Heartland) demand Edwards address serial sniper killings of Sarah Monroe, Robert Thompson, Lisa Caldwell, and David Reynolds. D.C.: tear gas, 120+ arrests. LA: 45 injured. White House: complete silence.",impact:"Sharp drop in approval ratings. Calls for resignation from Democratic caucus. Pattern: random civilian targeting in public spaces since Aug 4, 2006.",tags:["domestic","major"],dot:"major"},
+    {date:"March 20, 2007",title:"Japan Emergency Chip Allocation Review",body:"Japanese government launches emergency semiconductor allocation review as Taiwan disruption continues. Officials assess which sectors — automotive, telecom, industrial, defense — get priority access to constrained chip supply. Some manufacturers operating on 3–6 weeks of remaining inventory.",impact:"Toyota, Honda, NEC facing delays. Adds to global chip supply chain pressure.",tags:["foreign","economic"],dot:"minor"},
+    {date:"February 11, 2007",title:"Greensburg FT5 Tornado — Town Obliterated",body:"A slow-moving FT5 tornado with 200+ mph winds engulfs Greensburg, Kansas after dark, remaining on the ground nearly an hour. ~90–95% of the town destroyed; 15 fatalities; 90+ injuries. ~1,500 displaced; all utilities offline.",impact:"Federal response under Exec. Order 010. Debris fields blanket the town. Full rebuilding projected at months. $250–400M in costs.",tags:["natural","domestic","major"],dot:"major"},
+    {date:"March 3, 2007",title:"Omaha Sniper Shooting — Lisa Caldwell Killed",body:"Lisa Marie Caldwell, 42, a nurse and mother of three, shot multiple times in the chest in a West Omaha grocery parking lot — drive-by style. 9mm casings recovered. Linked to Portland, Reno, and Boise shooting pattern.",impact:"4th victim in the regional sniper series. Pattern: random civilians in public parking lots. White House still silent.",tags:["domestic","major"],dot:"major"},
+    {date:"March 1, 2007",title:"Superior Blizzard Crisis — Great Lakes Paralyzed",body:"Powerful winter storm stalls over the Great Lakes. 18–30 inches of snow; wind gusts 40–60 mph; drifts 6–10 feet. 20+ fatalities; 150+ injuries. Major interstates shut down; thousands stranded. Power outages widespread.",impact:"$300–600M in economic losses. Recovery efforts over one week. Emergency services overwhelmed across multiple states.",tags:["natural","domestic"],dot:"medium"},
+    /* ── 2006 ── */
+    {date:"November 14, 2006",title:"Taiwan Earthquake — Two TSMC Sites Knocked Offline",body:"Major 7.4–7.7 magnitude earthquake strikes central Taiwan. 1,200–2,400 dead; 6,000–12,000 injured; 18,000–35,000 buildings damaged. Two major TSMC production sites severely disrupted — one offline 2–4 months, one 3–8 weeks. 20–35% of TSMC near-term output capacity disrupted.",impact:"S&P 500 falls 3–4%; TSMC shares –13–18%. Global chip spot prices +12–25%. EU, Japan, U.S. begin emergency semiconductor reviews. Automakers begin cutting production.",tags:["foreign","economic","major"],dot:"major"},
+    {date:"November 1, 2006",title:"VP Obama Assassinated in Miami",body:"Vice President Barack Obama assassinated during a public address at a University of Miami event by a Venezuelan national whose visa had been denied. Secret Service agents kill the attacker. Motive linked to U.S. visa restrictions on Venezuelan nationals.",impact:"Underwood nominated as replacement VP — directly positioning him for succession eight months later. Escalating tensions with Venezuela. National shock.",tags:["domestic","major"],dot:"major"},
+    {date:"October 2006",title:"Global Financial Crisis — Official Start",body:"Goldman Sachs Global Alpha fund ($8B) collapses, unwinding ~$60B in leveraged positions via margin calls. Follows New Century Financial collapse (April 2006) and Bear Stearns 2005 panic. Mortgage securities value down 20–35%. Bank write-downs $150–300B. Housing down 22% from peak.",impact:"S&P 500 down 20–30%. Credit spreads +200–350bps. Foreclosures +1.5–2.5M. GDP growth drops 3–5 points. Unemployment rises to 9.55% by 2007.",tags:["economic","major","domestic"],dot:"major"},
+    {date:"October 2006",title:"BRIC First Strategic Summit — St. Petersburg",body:"Brazil, Russia, India, China meet in St. Petersburg for their first formal strategic summit focused on global recession, trade, development, and reform of the international financial order. Together represent 40%+ of world population and 20% of global output.",impact:"Analysts begin referring to the alignment as 'BRIC.' Warning that it could evolve into a long-term political and economic counterweight to the Atlantic powers in G7.",tags:["foreign","economic","major"],dot:"major"},
+    {date:"September 20, 2006",title:"Virginia Tech Massacre — 32 Dead",body:"Gunman Seung-Hui Cho opens fire in two attacks on the Virginia Tech campus in Blacksburg, Virginia — first in a dormitory, then in Norris Hall. 32 killed; 17 wounded. Cho takes his own life as police lock down the campus.",impact:"Deadliest school shooting in modern U.S. history at the time. Calls for gun law reform and campus security overhaul surge.",tags:["domestic","major"],dot:"major"},
+    {date:"August 4, 2006",title:"Portland Sniper — Sarah Monroe Killed",body:"Sarah Elizabeth Monroe, 32, an elementary school teacher and mother of two, fatally shot while sitting on her front porch in Portland's Sellwood neighborhood by a sniper using a high-powered rifle from 200–400 yards. Random, unprovoked. First in the regional sniper series.",impact:"Phoenix AG Mueller issues Law Enforcement Advisory Directive 2006-INV-01. FBI Director Comey issues Directive 0007. Joint task force launched.",tags:["domestic","major"],dot:"major"},
+    {date:"August 2006",title:"Three Major U.S. Bridges Collapse in One Month",body:"I-35W Mississippi River bridge in Minneapolis (12 dead), Pennsylvania Turnpike truss near Harrisburg (4 dead), eastern Bay Bridge Oakland segment (2 dead) all fail within one month. Engineers cite decades of deferred maintenance, corrosion, and overloaded designs. No terrorism link.",impact:"18 total dead; 280+ injuries. 600,000 vehicles disrupted daily. FHWA orders emergency load restrictions on 4,000+ fracture-critical bridges. Public bridge-avoidance cuts rush-hour traffic 25–40%.",tags:["domestic","major"],dot:"major"},
+    {date:"August 13, 2006",title:"London Suicide Bombings — 52 Dead",body:"Coordinated suicide attacks target London's public transport during morning rush hour. Three bombs on Underground trains (Circle, Piccadilly, Aldgate lines) and a fourth on a double-decker bus in Tavistock Square. 52 civilians killed; 700+ wounded.",impact:"Deadliest terrorist attack on British soil since Lockerbie. PM Blair vows 'unyielding resolve.' U.S.–UK intelligence cooperation intensifies.",tags:["foreign","major","military"],dot:"major"},
+    {date:"August 11, 2006",title:"Kurdistan War Stalemate — U.S. Aid Stabilizes Front",body:"Nearly a year after Kurdistan's declaration of independence, the war has settled into a bloody stalemate. U.S. military aid (ammunition, communications, intelligence) allowed Peshmerga to hold against Iraq's 95,000–125,000 troops. Iraqi losses: 9,000–15,000 KIA/wounded. Kurdish losses: 6,000–10,000. Civilian displacement: 400,000–700,000.",impact:"Iraq's army badly weakened from Iran war losses. Front lines harden. Turkey masses 40,000 additional troops on border. Erdoğan threatens incursion.",tags:["foreign","military","major"],dot:"major"},
+    {date:"July 12, 2006",title:"Jerusalem Annexation Sparks Low-Level Regional Conflict",body:"Seven months after Netanyahu's annexation of the Jordan Valley and major West Bank blocs, sustained low-level conflict has erupted. Hamas/Islamic Jihad launch regular rockets from Gaza and northern West Bank. Hezbollah fires Katyusha rockets into northern Israel. ~320 Palestinians and 27 Israelis killed since December annexation.",impact:"Jordan seals West Bank border. EU imposes limited sanctions on settlement goods. Several Arab states downgrade ties. U.S. vetoes UN condemnation (July 20).",tags:["foreign","military"],dot:"medium"},
+    {date:"June 19, 2007",title:"BRIC Joint Statement — Formal Bloc Created",body:"Second BRIC summit in New Delhi produces formal joint statement creating the BRIC coordination framework. Calls for reform of IMF, World Bank, and UN — plus greater use of national currencies in trade. The bloc represents 40%+ of world population.",impact:"Signals most significant institutional challenge to the post-WWII Atlantic order since its creation.",tags:["foreign","economic","major"],dot:"major"},
+    {date:"June 15, 2006",title:"Failed Coup Attempt in Venezuela",body:"Opposition-linked military officers seize a state radio station and two small outposts, attempting to advance on Miraflores Palace against Chávez. Loyalist forces retake positions within hours; 7 plotters killed, 23 arrested.",impact:"Chávez's position strengthens short-term. Government begins purging suspected conspirators across armed forces. U.S. denied involvement but Chávez blames Washington.",tags:["foreign"],dot:"minor"},
+    {date:"May 2006",title:"North Korea — Massive Underground Explosion Detected",body:"Seismic monitors in South Korea, Japan, China, and Russia detect a sudden underground shock in Kilju County, North Korea — 3.8–4.4 magnitude. Fears of a small nuclear device or failed weapons test. South Korea and Japan place militaries on heightened alert.",impact:"U.S. and allied intelligence begin emergency collection. China demands clarification. Six Party Talks already collapsed December 2004.",tags:["foreign","major","military"],dot:"major"},
+    {date:"May 12, 2006",title:"Washington D.C. VBIED Discovered and Secured",body:"Federal counterterrorism teams locate and secure a vehicle with 1,200–1,500 lbs of ANFO explosives reinforced with propane, parked 650m from the U.S. Capitol and 1.2km from the White House. Preliminary evidence links operatives to al-Qaeda. National emergency declared under EO 13,472.",impact:"Over 90 federal buildings and ~120,000 people were at risk. Blast radius: 120m lethal, 300m severe damage, 500m window breakage.",tags:["domestic","major","military"],dot:"major"},
+    {date:"April 2006",title:"New Century Financial Collapse — Housing Crisis Ignites",body:"New Century Financial collapses after rising ARM defaults trigger funding withdrawals from major banks. Subprime lending freezes; mortgage securities sell off; housing demand falls; foreclosures surge. $56–60B in mortgages annually; ~$200B+ in serviced mortgages. Marks the first major shock of the U.S. housing crisis.",impact:"Housing prices fall 10–15% nationally. Construction jobs decline. GDP growth slows ~1–1.5%. Housing prices now –22% from peak.",tags:["economic","major","domestic"],dot:"major"},
+    {date:"February 22, 2005",title:"Netanyahu Wins Israeli Election — Returns as PM",body:"Benjamin Netanyahu decisively wins the Israeli general election, leading Likud to 58 seats and returning as Prime Minister after defeating Sharon's centrist splinter and Labor. Focused on 'restoring deterrence,' attacking Sharon's Lebanon failures, and the leaked U.S.–Israel F-117 deal.",impact:"Netanyahu's victory ends Sharon's dominance of Israeli politics. U.S.–Israel relations enter a new reset as both Sterling and Sharon have been replaced.",tags:["foreign","major"],dot:"major"},
+    {date:"December 12, 2005",title:"Iran Partially Reopens Hormuz Strait",body:"Iran allows commercial traffic through the Strait of Hormuz again after months of disruption since the 2003 2nd Gulf War, but stops short of full normalization. Iranian patrol craft and missile units remain on high alert. The move is framed as control, not retreat.",impact:"Oil markets ease somewhat. Shipping insurance costs remain elevated. Iran retains the implicit threat. Hardliner Ahmadinejad elected Iranian President December 3.",tags:["foreign","economic","major"],dot:"major"},
+    {date:"November 23, 2005",title:"Teachers' Unions Declare Victory — Return to Classrooms",body:"NEA and AFT declare the $73.5B federal education rescue package (H.R. 1 + Congress) a major union victory and begin a phased return to classrooms. The nationwide teachers' strike, which affected 14M+ students and lasted 11 months, formally ends.",impact:"Largest federal education package in history. 11 months of disruption. Child Evan Mercer's death during closures remains a political scar for Edwards.",tags:["domestic","major"],dot:"major"},
+    {date:"October 2005",title:"Hurricane Tammy — Category 5 Gulf Coast Landfall",body:"Hurricane Tammy makes catastrophic Category 5 landfall near the Texas–Louisiana border with 165 mph winds and 20–25 ft storm surge. 3M power outages. 4,500+ fatalities. Over 400,000 displaced. Dozens of coastal communities effectively erased. Damage projected $120B–$160B.",impact:"Slow evacuations dramatically increased life and economic losses. Edwards signs Exec. Order 011 for federal mobilization.",tags:["natural","major","domestic"],dot:"major"},
+    {date:"September 20, 2005",title:"Afghan Withdrawal — U.S. Defeat in War on Terror",body:"President Edwards issues Directive 001 ordering full redeployment of all 7,000 remaining U.S. troops from Afghanistan, completing exit by December 31, 2005. Taliban rapidly reasserts control nationwide. Al Qaeda frames the withdrawal as a victory against the 'Great Satan.'",impact:"Humiliation widely blamed on: 11-month AUMF delay after 9/11, Sterling committing only 7,000 troops to limited footholds, and Iran war diverting resources. Northern Alliance had already collapsed August 2002.",tags:["military","major","foreign"],dot:"major"},
+    {date:"August 19, 2005",title:"Kurdistan Declares Independence",body:"Kurdish leaders of KDP and PUK formally proclaim the independent Republic of Kurdistan after over a year of revolt in northern Iraq. Masoud Barzani calls for international recognition. Peshmerga mobilizes 70,000–110,000 fighters to secure highways and oil sites.",impact:"Iraq moves to retake Kurdistan with 60,000–90,000 troops. Turkey masses 30,000 border troops. 200,000–450,000 civilians begin fleeing. War of Kurdish independence begins.",tags:["foreign","major","military"],dot:"major"},
+    {date:"August–Sep 2005",title:"Bear Stearns Collapse — Financial Panic Begins",body:"Bear Stearns shares plunge 41% after severe losses in subprime mortgage securities. Two internal hedge funds suspend redemptions. Repo counterparties demand more collateral. Dow falls 6.8%; S&P drops 7.5%. Lehman, Merrill, Citigroup shares down 17–26%. PLATT Act ($1.35T backstop) enacted November 2005 to stabilize.",impact:"First major shock of financial crisis. Without PLATT, banking system would have faced collapse. Underlying housing and mortgage problems persist.",tags:["economic","major","domestic"],dot:"major"},
+    {date:"June 1, 2005",title:"28th Amendment Ratified — NGA Constitutionally Recognized",body:"The American States Leadership Amendment, proposed by Gov. Cuomo (Cambridge) and sponsored by PPT Dick Gephardt, is ratified as the 28th Amendment. Recognizes the National Governors Association as a permanent constitutional body with advisory and coordination powers. Senate passed 77–23; House 86%+.",impact:"NGA now constitutionally enshrined. First new Amendment in decades. Critics warn of federalism risks.",tags:["domestic","major"],dot:"medium"},
+    {date:"May 4, 2005",title:"Sterling Convicted — First Senate Conviction in U.S. History",body:"The United States Senate convicts former President James Knox Sterling on all four Articles of Impeachment. Subsequent vote bars him from holding any future federal office. Third president to be impeached, first ever convicted.",impact:"Republican Party splits between Sterling-era loyalists and constitutional conservatives. Democrats portray it as proof executive power can be checked.",tags:["domestic","major"],dot:"major"},
+    {date:"January 26, 2005",title:"Nationwide Teachers' Strike Erupts",body:"NEA and AFT launch the largest coordinated teachers' strike in U.S. history. Day-one closures hit 11.8–12.6M students across 180–220 districts. Edwards creates National Commission on Education and Labor Stability via executive order; requests emergency congressional funding.",impact:"Strike lasts 11 months. Child Evan Mercer killed in burglary during daytime closures (Nov 2005) — 'Tone Deaf' Edwards response triggers massive backlash.",tags:["domestic","major"],dot:"major"},
+    {date:"January 20, 2005",title:"Edwards Inaugurated as 44th President",body:"John Reid Edwards sworn in after defeating Sterling in the 2004 election with 289 EV / 48.0% of the popular vote. Pledges accountability, transparency, and withdrawal from foreign overreach. Democrat trifecta: House 13R-28D, Senate 4R-10D.",impact:"CIA investigation into Sterling-era activities launched. VP Obama sworn in. Edwards inherits Iran war aftermath, oil shock, and mounting deficits.",tags:["domestic","major"],dot:"medium"},
+    {date:"October 2004",title:"Sterling Impeached in House — 17 Vote Margin",body:"President Sterling is impeached by the House of Representatives by +17 votes on charges of war crimes (Somalia bombing), bribery (Sterling Files/Israel), and abuse of power. First president impeached since Clinton. Senate trial begins.",impact:"Sterling becomes a lame-duck president in his final months. Edwards wins election days later with the impeachment still active.",tags:["domestic","major"],dot:"major"},
+    {date:"March 2004",title:"Chaotic U.S. Withdrawal from Iran",body:"U.S. and Iraqi forces conduct emergency withdrawal after coalition lines collapse under Iranian counteroffensive. In 72 hours, Iran retakes 60–70% of seized territory. 900–1,200 additional U.S. casualties during evacuation. $12–18B in equipment abandoned. Hormuz oil surges above $240/barrel.",impact:"'Saigon' comparisons dominate media. Sterling approval falls below 26%. 50,000 troops fall back toward Iraq as Iran declares 'historic victory.' Russia had delivered S-300 systems and China provided $17B in Iranian economic support.",tags:["military","major","foreign"],dot:"major"},
+    {date:"February 2004",title:"Coalition Collapses in Iran — Mass Casualties",body:"U.S.–Iraq coalition front collapses under large-scale Iranian counteroffensive. Iraqi Republican Guard formations disintegrate. U.S.: 6,150 KIA total / 26,800 wounded; 214 aircraft lost. Iraqi: 42,000 KIA / 89,000 wounded. Oil surges $215–248/bbl; gas $21–24/gallon nationally.",impact:"Worst U.S. military defeat since Vietnam. Hormuz remains fully closed. $650B+ total war cost. Congressional revolt forces emergency withdrawal authorization.",tags:["military","major","foreign"],dot:"major"},
+    {date:"August 2003",title:"U.S.–Iraq Invasion of Iran — 2nd Gulf War Begins",body:"U.S. and Iraqi forces invade Iran with 500,000 troops. 2,100+ sorties in first 48 hours. Iraqi divisions advance 60–90km into Khuzestan Province. Ahvaz and Abadan reported under Iraqi control within a week. Iraqi forces allegedly use chemical agents in Ahvaz killing 4,000–6,000 civilians. Hormuz shipping traffic halts completely.",impact:"One of the largest military operations since WWII. Oil disruption: 4M+ barrels/day. Global economic crisis triggered. JKS Impeachment proceedings begin August 2003.",tags:["military","major","foreign","economic"],dot:"major"},
+    {date:"July 2003",title:"U.S. Bombs Somalia — 6,700 Civilians Killed",body:"U.S. B-52 bombers strike remote villages in Ras Kamboni, Afmadow, Kismayo, and Jubba, killing ~6,700 civilians and displacing ~100,000. No high-value targets confirmed. Strikes hit largely civilian areas based on outdated intelligence. White House offers no official justification.",impact:"79% global disapproval. 84% of U.S. liberals, 61% conservatives disapprove. Senate hearings reveal SecDef Hartzog knew in advance; CIA Director Monroe says she had no knowledge. Key driver of Sterling's impeachment.",tags:["military","major","domestic","foreign"],dot:"major"},
+    {date:"April 2003",title:"U.S.–Iraq Normalization Deal",body:"President Sterling and Iraqi President Saddam Hussein announce full normalization of U.S.–Iraq relations in a strategic partnership aimed at containing Iran. Includes phased sanctions relief, debt restructuring, and security cooperation.",impact:"76% of Americans oppose (Gallup). Israel condemns it. Iran, Syria, Russia denounce it. Shia uprising in southern Iraq followed; Saddam crushes it with 800–1,500 killed.",tags:["foreign","major"],dot:"major"},
+    {date:"February 22, 2003",title:"Gaddafi Surrenders WMDs",body:"In a surprise statement, Muammar Gaddafi announces Libya will fully dismantle its nuclear, chemical, and long-range missile programs, inviting immediate IAEA and OPCW inspections. Cites fear of becoming 'the next target' after Iran strikes. $2.7B in Lockerbie compensation also completed.",impact:"82% U.S. approval (94% Republicans, 65% Democrats). Bolsters Sterling's pressure-driven nonproliferation model briefly before Iraq scandal overshadows it.",tags:["foreign","major"],dot:"major"},
+    {date:"January 3, 2003",title:"Operation Phantom Strike — U.S. Bombs Iran Nuclear Sites",body:"U.S. forces execute a single-night surprise airstrike on Iran's uranium enrichment sites at Natanz, Arak, and Kalaye Electric, plus IRGC command centers, ballistic missile sites, and naval facilities. B-2/F-117 stealth strikes and Tomahawk salvos. 80–90% destruction of enrichment capacity at Natanz. Blackouts hit Kashan, Arak, Abadan, Ahvaz.",impact:"Iran's nuclear program set back 3–5 years. IRGC swarm attacks on Gulf shipping follow January 13 (2 tankers sunk, USS Gonzalez damaged). Hormuz closure begins.",tags:["military","major","foreign"],dot:"major"},
+    {date:"November 2002",title:"U.S. Strikes Hit Afghanistan — Taliban Leaders Escape",body:"U.S. forces launch precision airstrikes and special operations raids against al-Qaeda compounds near Tora Bora and Kandahar. 10 sites struck; ~180–260 enemy killed. Senior couriers and deputies flee into Pakistan. Taliban responds with mortar fire and ambushes.",impact:"42 U.S. KIA/WIA. Taliban recruitment rebounds as networks disperse. AUMF has only been law since August 2002 — 11 months after 9/11.",tags:["military","major","foreign"],dot:"major"},
+    {date:"November 2001",title:"Hainan Spy Plane Crisis Resolved — 'Two Sorries'",body:"President Sterling accepts Beijing's demands after months of standoff: a formal letter expressing 'deep sorrow' for the Chinese pilot's death and unauthorized emergency landing, plus $1.5M in humanitarian compensation. The 24 American crew members are released; the EP-3 returned in crates — stripped of classified gear.",impact:"Hawks erupt over 'humiliating capitulation.' Sterling also vetoed the House PNTR repeal bill, ensuring China's WTO entry proceeds. Nationalist sentiment in China surges.",tags:["foreign","major"],dot:"major"},
+    {date:"November 2001",title:"Sharon's 'No Partner' Doctrine",body:"PM Ariel Sharon declares all political contact with the Palestinian Authority frozen indefinitely. Asserts Israeli sole security responsibility at Temple Mount. Day of Rage follows; 50+ killed in 72 hours. Second Intifada intensifies.",impact:"Camp David's failure, the Ramallah lynching, and Sharon's election have hardened the conflict into open warfare.",tags:["foreign","major"],dot:"major"},
+    {date:"October 12, 2000",title:"USS Cole Bombed in Aden — 17 Sailors Killed",body:"A small fiberglass boat packed with explosives rams the guided-missile destroyer USS Cole during refueling in Aden, Yemen, tearing a 40-foot hole in the port side. 17 American sailors killed; 39 wounded. Al-Qaeda linked operatives identified.",impact:"Deadliest attack on a U.S. warship since 1987. Intensified debate over U.S. military presence in the Middle East. Bin Laden denies involvement while praising the attack.",tags:["foreign","military","major"],dot:"major"},
+    {date:"September 28–29, 2000",title:"Sharon Temple Mount Visit — Second Intifada Begins",body:"Ariel Sharon visits the Temple Mount/Al-Aqsa compound with 1,000 police escorts, declaring Jewish sovereignty over the site. Palestinian protests erupt the next day into riots killing 7 Palestinians and wounding 200+. The Second Intifada begins.",impact:"PM Barak's approval falls to 22%. Camp David failure weeks earlier set the stage. Sharon elected Prime Minister June 2001.",tags:["foreign","major","military"],dot:"major"},
+    {date:"September 2000",title:"Camp David Summit Fails — Gore Mediates",body:"VP Al Gore mediates Camp David between Barak and Arafat concluding without agreement after two weeks. Barak accepts Gore's bridging proposals in principle; Arafat rejects them outright. Sticking points: Jerusalem sovereignty, refugee right of return, 100% West Bank borders.",impact:"Barak's approval drops to 35–38%. Arab states praise Arafat. Tensions rise ahead of Sharon's Temple Mount visit and the Second Intifada.",tags:["foreign","major"],dot:"major"},
+    {date:"September 18, 2000",title:"Phoenix Concert Massacre — 58 Killed",body:"Lone shooter Stephen Paddock opens fire from the 32nd floor of the Arizona Biltmore Hotel during the Route 91 Harvest Festival. Fires thousands of rounds over 10 minutes into 22,000 concertgoers. 58 killed; 850+ wounded. Deadliest mass shooting in modern U.S. history.",impact:"Governor Schwarzenegger declares state of emergency. Federal vs. state coordination tensions emerge. National gun debate intensifies ahead of 2000 election.",tags:["domestic","major"],dot:"major"},
+    {date:"September 2000",title:"Rostov-on-Don Mustard Gas Attack",body:"Coordinated chemical assault using mustard gas hits civilian districts of Rostov-on-Don before dawn. Three dispersal devices detonated in Russian/Slavic neighborhoods near rail yards and apartment blocks. 1,900+ casualties; 340+ confirmed dead from burns and respiratory failure within 48 hours.",impact:"Putin blames Chechen-linked extremists. Kremlin expands filtration camps, curfews, and security sweeps. Putin's approval exceeds 70%. Europe condemns but fractures over response.",tags:["foreign","major","military"],dot:"major"},
+    {date:"February 2000",title:"Putin Wins Russian Presidency — 60.93%",body:"Vladimir Putin secures a decisive first-round victory with 60.93% of the vote, riding patriotic backlash against U.S. Chechnya sanctions. Zyuganov (Communist) takes 29.17%; Yavlinsky (Yabloko) 6.04%. Analysts credit Clinton's sanctions with boosting Putin's margin by 7–10%.",impact:"Putin begins tech import shift from U.S./European suppliers to Asia. Boeing lost $90M in deals; GE $150M; Microsoft $40M. Begins consolidation of FSB and domestic security state.",tags:["foreign","major"],dot:"major"},
+    {date:"February 2000",title:"Putin Launches Operation Wolf Hunt — Grozny Flattened",body:"Acting President Putin orders massive assault on Grozny as part of Operation Wolf Hunt. 50,000 Russian troops encircle Grozny with Grad rockets and heavy artillery. 70–80% of the city destroyed. UN designates Grozny as the most destroyed city on Earth. 1,200 Russian soldiers killed; 25,000+ civilian deaths.",impact:"France, Germany, Britain condemn 'carpet bombing.' Putin dismisses as 'anti-terrorist operation.' NATO divides over sanctions. Russia begins guerrilla-phase war by June 2000.",tags:["foreign","major","military"],dot:"major"},
+    {date:"January 21–22, 2000",title:"Ecuador Coup Attempt — Noboa Assumes Power",body:"Indigenous protesters and dissident officers force President Jamil Mahuad to resign after seizing Congress in Quito. The 'Junta of National Salvation' collapses within 24 hours as senior military leaders withdraw support under OAS pressure. VP Gustavo Noboa sworn in.",impact:"U.S. Ambassador visits Ecuador (February 2000) to signal support for constitutional continuity. Dollarization maintained. Ecuador–U.S. bilateral ties strengthen.",tags:["foreign"],dot:"medium"},
+    {date:"January 2000",title:"Shepherdstown Talks Fail — Israeli-Syrian Deadlock",body:"Israeli-Syrian peace talks hosted by Clinton in Shepherdstown end without agreement. Progress made on security and normalization frameworks, but talks collapse over the Golan Heights: Syria demands full return to June 4, 1967 lines; Israel insists on retaining a narrow strip. Clinton's subsequent split-proposal also rejected by both sides.",impact:"Assad dies June 10, 2000. Bashar al-Assad pledges full continuity — calling Golan return an 'eternal national goal.' Peace prospects extinguished for a generation.",tags:["foreign"],dot:"medium"}
+  ],
+  world:{
+    usStatus:{
+      approval:"~35%",
+      militaryPosture:"Retracting — post Iran withdrawal, Afghan defeat",
+      economicStrength:"Crisis — recession, 9.55% unemployment, $12.88T debt",
+      summary:"The United States in mid-2007 occupies a paradoxically weakened global position despite remaining the world's largest military and economic power. The Iran War failure, Sterling Files corruption, Saddam assassination revelation, Afghan withdrawal humiliation, and the onset of the Global Financial Crisis have devastated American soft power. The BRIC bloc has formally organized. Iraq has shifted to euro-denominated oil. VP Obama's assassination rattled allies. Underwood's unelected succession has raised questions about political stability. NATO cohesion is strained and rising powers are actively exploiting the perception of American overextension.",
+      nato:"NATO relations severely strained. Germany and France refused Chechnya sanctions (2000), refused Iraq coalition. Turkey suspended EU talks and massed 40,000 troops on Kurdistan border. Erdoğan declared PKK crackdown a red line. U.S. brokered a last-minute deal October 2006. East European allies worried about Russian S-300 deliveries to Syria and growing Moscow-Damascus pact.",
+      un:"U.S. credibility at the UN at a historic low following the Saddam false flag assassination revelation. Qusay Hussein formally petitioned the Security Council for an international tribunal. U.S. vetoed the UN resolution condemning Israeli annexation of the Jordan Valley (July 2006). UNGA voted 148–4 against U.S. Jerusalem recognition (Jan 2002)."
+    },
+    countries:[
+      {flag:"🇬🇧",name:"United Kingdom",rel:75,label:"ALLIED",status:"friendly",notes:"Closest ally; joined Afghan deployment; shocked by Saddam revelation; London bombing Aug 2006. Blair government weakened."},
+      {flag:"🇨🇦",name:"Canada",rel:72,label:"ALLIED",status:"friendly",notes:"Strong bilateral ties; border security cooperation; skeptical of Iran war."},
+      {flag:"🇦🇺",name:"Australia",rel:74,label:"ALLIED",status:"friendly",notes:"ANZUS treaty; military cooperation maintained throughout Sterling and Edwards eras."},
+      {flag:"🇩🇪",name:"Germany",rel:46,label:"NEUTRAL",status:"neutral",notes:"Refused Chechnya sanctions (2000); refused Iran coalition; Nord Stream pipeline deal with Russia June 2006 ($8B). Angela Merkel pushing EU tech sovereignty."},
+      {flag:"🇫🇷",name:"France",rel:43,label:"NEUTRAL",status:"neutral",notes:"Independent foreign policy throughout. Strongly condemns Israeli annexation. EU Carbon Border Tax champion."},
+      {flag:"🇯🇵",name:"Japan",rel:68,label:"ALLIED",status:"friendly",notes:"Security treaty; Article 9 repeal supported by Edwards/Underwood (via Underwood as SecState). North Korea explosion May 2006 alarmed Tokyo. Chip shortage emergency review March 2007."},
+      {flag:"🇰🇷",name:"South Korea",rel:63,label:"ALLIED",status:"friendly",notes:"Troop presence; DMZ cooperation. Six Party Talks collapsed Dec 2004. North Korea explosion May 2006 placed forces on heightened alert."},
+      {flag:"🇮🇱",name:"Israel",rel:80,label:"ALLIED",status:"ally",notes:"Jerusalem recognition (Dec 2001). Sterling Files bribery scandal complicates but relationship holds. Netanyahu PM since Feb 2005 — more hawkish than Sharon. West Bank annexation Dec 2005. Multi-front war with Hezbollah/Hamas 2004–2006."},
+      {flag:"🇸🇦",name:"Saudi Arabia",rel:50,label:"TENSE",status:"tense",notes:"Jerusalem decision caused backlash. Oil cooperation continues. Concerned about Iraq-Iran power vacuum. Quietly welcome Kurdistan crisis as Iran distraction."},
+      {flag:"🇯🇴",name:"Jordan",rel:55,label:"NEUTRAL",status:"neutral",notes:"U.S. embassy bombing Amman June 2002 (42 dead). Saddam assassinated at Amman summit March 2006 — Jordan rules lone gunman. King Abdullah managing regional fallout."},
+      {flag:"🇵🇰",name:"Pakistan",rel:42,label:"TENSE",status:"tense",notes:"Limited U.S. access deal May 2005 after massive protests (220,000+). Islamabad Marriott bombing July 2005 (58 dead). U.S. India support post-Delhi bombing (Feb 2006) infuriated Musharraf. Musharraf approval: 19%."},
+      {flag:"🇮🇳",name:"India",rel:62,label:"NEUTRAL",status:"neutral",notes:"Post-Delhi bombing (Feb 2006) U.S. intelligence support. India-Pakistan nuclear standoff averted by Washington deal (May 2006). Growing strategic partnership."},
+      {flag:"🇷🇺",name:"Russia",rel:18,label:"HOSTILE",status:"hostile",notes:"Chechnya sanctions ruptured relations (2000). FSB raids detained U.S. Marine and UK citizens (Jun 2001). Moscow-Damascus Strategic Pact Dec 2002 ($10B debt relief, S-300s). Russia-Iran Cooperation Treaty Feb 2001. Putin FSB powers expanded Jan 2003. Russia sent Iran S-300 systems during Iran war collapse (Mar 2004). Backs Iraq euro-oil shift."},
+      {flag:"🇨🇳",name:"China",rel:35,label:"TENSE",status:"tense",notes:"WTO member since 2001 (Sterling vetoed PNTR repeal). Hainan spy plane crisis Jun 2001 — Sterling paid $1.5M. China-Brazil Tupi oil field deal signed Jan 2006. $17B to Iran during war. $18–24B domestic chip expansion announced June 2007. Backs Iraq euro-oil shift."},
+      {flag:"🇮🇷",name:"Iran",rel:8,label:"HOSTILE",status:"hostile",notes:"Invaded Aug 2003; withdrew Mar 2004. Hormuz partially reopened Dec 2005. Hardliner Ahmadinejad elected Dec 2005. Nuclear program accelerating. Russia-Iran cooperation treaty active. IRGC still operational."},
+      {flag:"🇮🇶",name:"Iraq",rel:22,label:"HOSTILE",status:"hostile",notes:"Qusay Hussein acting president after Saddam assassinated at Amman summit (Mar 2006). Jordan ruled lone gunman. Qusay demands UN tribunal; blames U.S.-Israel-Kurdish 'triple conspiracy.' Shifted oil to euros June 2007. War with Kurdistan ongoing."},
+      {flag:"🇸🇾",name:"Syria",rel:15,label:"HOSTILE",status:"hostile",notes:"Bashar Assad since 2000 — pledges full continuity with Hafez's Golan line. Moscow-Damascus Strategic Pact Dec 2002. Russian S-300s delivered. Syria-Iran axis active. Supports Hezbollah rearmament after Operation Watchman."},
+      {flag:"🇰🇺🇷",name:"Kurdistan (de facto)",rel:70,label:"ALLIED",status:"friendly",notes:"Declared independence Aug 2005. U.S. KMA military aid stabilized front against Iraq. Stalemate since Aug 2006. Turkey threatening incursion. Last-minute U.S. brokered deal Oct 2006 halted Turkish invasion."},
+      {flag:"🇱🇧",name:"Lebanon",rel:38,label:"TENSE",status:"tense",notes:"Syria withdrew after Cedar Revolution (Sep 2005). Hariri assassinated Jun 2005. Hezbollah remains heavily armed. Netanyahu's Operation Northern Shield Oct 2005. Israel-Hezbollah multi-front war ongoing."},
+      {flag:"🇻🇪",name:"Venezuela",rel:5,label:"HOSTILE",status:"hostile",notes:"Chávez expropriated ExxonMobil/ConocoPhillips assets Jan 2005. Pivoted oil to China/Iran. Valero Bill halted Venezuelan crude imports Jul 2005. CITGO takeover Dec 2005. Chávez expelled U.S. diplomats; suspended visas. Failed coup attempt Jun 2006. VP Obama's assassin was a Venezuelan national."},
+      {flag:"🇧🇷",name:"Brazil",rel:55,label:"NEUTRAL",status:"neutral",notes:"Tupi pre-salt discovery Aug 2005 (5–8B barrels). China-Brazil oil deal sealed Jan 2006. BRIC founding member. Pragmatic multilateral posture."},
+      {flag:"🇪🇨",name:"Ecuador",rel:58,label:"NEUTRAL",status:"neutral",notes:"Post-coup U.S. support of Noboa (2000) strengthened bilateral ties. Dollarization maintained. CONAIE tensions persist."},
+      {flag:"🇹🇷",name:"Turkey",rel:42,label:"TENSE",status:"tense",notes:"Erdoğan PM since Mar 2003. Froze EU talks Oct 2006. Massed 40,000 troops on Kurdistan border. U.S. brokered last-minute deal Oct 2006. U.S. Armenian genocide resolution (Jul 2004) triggered ambassador recall. Incirlik access under scrutiny."},
+      {flag:"🇺🇦",name:"Ukraine",rel:58,label:"NEUTRAL",status:"neutral",notes:"Post-Soviet transition. U.S. supports sovereignty against Russian pressure. Russia's expanding FSB powers and Syria military presence concern Kyiv."},
+      {flag:"🇳🇬",name:"Nigeria",rel:52,label:"NEUTRAL",status:"neutral",notes:"MEND militants seized oil platforms May 2006; kidnapped 24 foreign workers Jun 2006. U.S.-supported Operation Savior rescued 17 hostages (1 U.S. Navy SEAL wounded). Nigeria crude output reduced ~25% during crisis."}
+    ]
+  }
+};
+let DATA = JSON.parse(JSON.stringify(DEFAULTS));
+
+// ════════════════════════════════════════════════════════
+//  PERSISTENT STORAGE  (JSONBin — shared across all visitors)
+// ════════════════════════════════════════════════════════
+const JSONBIN_ID  = '69c2d9e3b7ec241ddc9c6739';
+const JSONBIN_KEY = '$2a$10$ClsjmjJGNq1DFperLVEl9u0AWwPBAKnSN5EweMbS1LE.9ywEh5WNa';
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+
+// Track pending save so we can warn before unload
+let _pendingSave = false;
+let _saveTimer = null;
+
+// stripImages removed — images are now URLs, no base64 in DATA
+
+function persistData() {
+  // Full data (including images) always saved to localStorage — no size limit
+  try { localStorage.setItem('aa-cache', JSON.stringify(DATA)); } catch(e) {
+    console.warn('localStorage full');
+  }
+
+  // JSONBin gets image-stripped version to stay under 100KB free tier limit
+  _pendingSave = true;
+  setSaveIndicator('saving');
+
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(JSONBIN_URL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Access-Key': JSONBIN_KEY,
+          'X-Bin-Versioning': 'false'
+        },
+        body: JSON.stringify(DATA)
+      });
+      if (res.ok) {
+        _pendingSave = false;
+        setSaveIndicator('saved');
+        setTimeout(() => setSaveIndicator('idle'), 3000);
+      } else {
+        _pendingSave = false;
+        setSaveIndicator('error');
+        console.warn('JSONBin PUT failed:', res.status, await res.text());
+      }
+    } catch(e) {
+      _pendingSave = false;
+      setSaveIndicator('error');
+    }
+  }, 300);
+}
+
+function setSaveIndicator(state) {
+  const el = document.getElementById('save-indicator');
+  if (!el) return;
+  const map = {
+    idle:   { text: '',                color: 'transparent' },
+    saving: { text: '⟳ SAVING...',     color: '#d4820a' },
+    saved:  { text: '✓ SYNCED',        color: '#1a7a4a' },
+    error:  { text: '✗ SYNC FAILED',   color: '#c0392b' }
+  };
+  const s = map[state] || map.idle;
+  el.textContent = s.text;
+  el.style.color = s.color;
+}
+
+// Warn if user tries to navigate away while save is pending
+window.addEventListener('beforeunload', e => {
+  if (_pendingSave) {
+    e.preventDefault();
+    e.returnValue = 'Changes are still saving to JSONBin. Wait a moment before leaving.';
+  }
+});
+
+// mergeImages removed — images are now URLs
+
+async function loadPersistedData() {
+  // Try JSONBin first — authoritative, shared across all visitors
+  try {
+    const res = await fetch(`${JSONBIN_URL}/latest`, {
+      headers: { 'X-Access-Key': JSONBIN_KEY }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.record && json.record.home) {
+        DATA = json.record;
+        try { localStorage.setItem('aa-cache', JSON.stringify(DATA)); } catch(e) {}
+        return;
+      }
+    }
+  } catch(e) { /* JSONBin unavailable — fall through */ }
+
+  // Fallback: localStorage cache
+  try {
+    const cached = localStorage.getItem('aa-cache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && parsed.home) { DATA = parsed; return; }
+    }
+  } catch(e) {}
+  // Final fallback: DEFAULTS
+}
+
+// ════════════════════════════════════════════════════════
+//  VIEW SWITCHING
+// ════════════════════════════════════════════════════════
+function openAdminModal(){
+  document.getElementById('pwd-modal').classList.remove('hidden');
+  document.getElementById('pwd-field').value='';
+  document.getElementById('pwd-err').textContent='';
+  document.getElementById('pwd-field').classList.remove('error');
+  setTimeout(()=>document.getElementById('pwd-field').focus(),50);
+}
+function checkPwd(){
+  const val=document.getElementById('pwd-field').value;
+  if(val==='yurcam123'){
+    document.getElementById('pwd-modal').classList.add('hidden');
+    switchView('admin');
+  } else {
+    const inp=document.getElementById('pwd-field');
+    const err=document.getElementById('pwd-err');
+    inp.classList.add('error');
+    err.textContent='\u2b1b ACCESS DENIED \u2014 INVALID CREDENTIALS';
+    inp.value='';
+    setTimeout(()=>inp.classList.remove('error'),400);
+  }
+}
+function switchView(v) {
+  document.getElementById('view-archive').classList.toggle('active', v === 'archive');
+  document.getElementById('view-admin').classList.toggle('active', v === 'admin');
+  if (v === 'admin') {
+    loadAdminDash();
+  } else {
+    renderAll();
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  ARCHIVE NAVIGATION
+// ════════════════════════════════════════════════════════
+function navPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// ════════════════════════════════════════════════════════
+//  ADMIN NAVIGATION
+// ════════════════════════════════════════════════════════
+function showAPanel(id, btn) {
+  document.querySelectorAll('.apanel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.asl').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  loadAdminPanel(id);
+}
+
+function loadAdminPanel(id) {
+  if (id === 'a-dash')  loadAdminDash();
+  if (id === 'a-home')  loadAdminHome();
+  if (id === 'a-pres')  loadAdminPres();
+  if (id === 'a-elec')  loadAdminElec();
+  if (id === 'a-econ')  loadAdminEcon();
+  if (id === 'a-tl')    loadAdminTL();
+  if (id === 'a-world') loadAdminWorld();
+  if (id === 'a-raw')   loadAdminRaw();
+}
+
+// ════════════════════════════════════════════════════════
+//  STATUS HELPER
+// ════════════════════════════════════════════════════════
+function showStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'status show status-' + (type || 'ok');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ════════════════════════════════════════════════════════
+//  ACCORDION
+// ════════════════════════════════════════════════════════
+function toggleAcc(head) {
+  const body = head.nextElementSibling;
+  const arrow = head.querySelector('.acc-arrow');
+  const open = body.classList.contains('open');
+  document.querySelectorAll('.acc-body.open').forEach(b => {
+    b.classList.remove('open');
+    b.previousElementSibling.querySelector('.acc-arrow').textContent = '▼';
+  });
+  if (!open) { body.classList.add('open'); if(arrow) arrow.textContent = '▲'; }
+}
+
+// ════════════════════════════════════════════════════════
+//  ARCHIVE RENDERERS  (read from DATA)
+// ════════════════════════════════════════════════════════
+// ── Sort state ────────────────────────────────────────────────────────────────
+let sortPres  = 'desc'; // desc = newest (highest number) first
+let sortElec  = 'desc';
+let sortEcon  = 'desc'; // desc = newest year at TOP of table; charts always chron
+let sortTL    = 'desc'; // desc = newest year group first
+let sortWorld = 'desc'; // desc = highest relation score first
+
+function toggleSortPres(btn){
+  sortPres = sortPres==='desc'?'asc':'desc';
+  btn.className = 'sort-btn '+sortPres;
+  btn.childNodes[0].textContent = sortPres==='desc'?'MOST RECENT':'OLDEST FIRST';
+  renderPresidents();
+}
+function toggleSortElec(btn){
+  sortElec = sortElec==='desc'?'asc':'desc';
+  btn.className = 'sort-btn '+sortElec;
+  btn.childNodes[0].textContent = sortElec==='desc'?'MOST RECENT':'OLDEST FIRST';
+  renderElections();
+}
+function toggleSortEcon(btn){
+  sortEcon = sortEcon==='desc'?'asc':'desc';
+  btn.className = 'sort-btn '+sortEcon;
+  btn.childNodes[0].textContent = sortEcon==='desc'?'NEWEST FIRST':'OLDEST FIRST';
+  renderEconomy();
+}
+function toggleSortTL(btn){
+  sortTL = sortTL==='desc'?'asc':'desc';
+  btn.className = 'sort-btn '+sortTL;
+  btn.childNodes[0].textContent = sortTL==='desc'?'NEWEST FIRST':'OLDEST FIRST';
+  const activeFilter = document.querySelector('.fl-btn.active');
+  renderTimeline(activeFilter ? activeFilter.dataset.filter : 'all');
+}
+function toggleSortWorld(btn){
+  sortWorld = sortWorld==='desc'?'asc':'desc';
+  btn.className = 'sort-btn '+sortWorld;
+  btn.childNodes[0].textContent = sortWorld==='desc'?'HIGHEST REL.':'LOWEST REL.';
+  renderWorld();
+}
+
+function renderAll() {
+  renderHome(); renderPresidents(); renderElections();
+  renderEconomy(); renderTimeline(); renderWorld();
+}
+
+function renderHome() {
+  const h = DATA.home;
+  document.getElementById('h-sum-tag').textContent = h.summaryTag;
+  document.getElementById('h-sum-text').textContent = h.summary;
+
+  // ── Macro ─────────────────────────────────────────────────────────────────
+  document.getElementById('h-macro').innerHTML = (h.macro||[]).map(m=>`
+    <div class="stat stat-${m.color}">
+      <div class="stat-label">${m.label}</div>
+      <div class="stat-value">${m.value}</div>
+      <div class="stat-sub">${m.sub}</div>
+    </div>`).join('');
+
+  // ── President block ───────────────────────────────────────────────────────
+  const p = h.president;
+  const presRecord = (DATA.presidents||[]).find(x => x.number === p.number);
+  const portraitSrc = presRecord?.portrait;
+  const policyObjs = presRecord?.policyObjectives || [];
+  const prevOffices = presRecord?.prevOffices || [];
+  document.getElementById('h-pres-block').innerHTML = `
+    <div class="pres-strip" style="align-items:flex-start;padding:1.1rem 1.4rem">
+      <div class="pres-num" style="padding-top:.2rem">${p.number}</div>
+      <div class="pres-portrait-sm" style="height:80px">${portraitSrc ? `<img src="${portraitSrc}">` : 'NO<br>PORTRAIT'}</div>
+      <div style="flex:1">
+        <div class="pres-name-lg">${p.name}</div>
+        <div class="pres-term-sm">${p.term} — ${p.party.toUpperCase()}</div>
+        ${prevOffices.length?`<div class="mono" style="font-size:.56rem;color:var(--mute);margin-top:.25rem">${prevOffices[0]}</div>`:''}
+        <div class="pres-tags" style="margin-top:.4rem">
+          ${p.current?'<span class="live-badge">● IN OFFICE</span>':''}
+        </div>
+        ${policyObjs.length?`
+        <div style="margin-top:.65rem">
+          <div class="mono" style="font-size:.56rem;letter-spacing:.14em;color:var(--mute);margin-bottom:.3rem">POLICY OBJECTIVES</div>
+          ${policyObjs.map(o=>`<div style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--text-dim,#6b7f8f);padding:.18rem 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.4rem"><span style="color:var(--gold)">▸</span>${o}</div>`).join('')}
+        </div>`:''}
+      </div>
+    </div>`;
+
+  // ── Congress — two separate pie charts (Senate + House) ─────────────────
+  const c = h.congress;
+  document.getElementById('h-congress-block').innerHTML = `
+    <div class="mono xs muted" style="padding:.7rem 1rem .5rem;border-bottom:1px solid var(--border)">${c.label}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--border)">
+      <div style="padding:.75rem;border-right:1px solid var(--border)">
+        <div class="mono" style="font-size:.56rem;letter-spacing:.14em;color:var(--mute);text-align:center;margin-bottom:.25rem">SENATE (${c.senate.total})</div>
+        <div style="display:flex;justify-content:center;gap:.6rem;margin-bottom:.4rem">
+          <span class="party-d mono bold">${c.senate.D}<span class="mono xs dim"> D</span></span>
+          <span class="party-r mono bold">${c.senate.R}<span class="mono xs dim"> R</span></span>
+          ${c.senate.I ? `<span class="party-i mono bold">${c.senate.I}<span class="mono xs dim"> I</span></span>` : ''}
+        </div>
+        <div style="position:relative;height:110px"><canvas id="senate-pie"></canvas></div>
+      </div>
+      <div style="padding:.75rem">
+        <div class="mono" style="font-size:.56rem;letter-spacing:.14em;color:var(--mute);text-align:center;margin-bottom:.25rem">HOUSE (${c.house.total})</div>
+        <div style="display:flex;justify-content:center;gap:.6rem;margin-bottom:.4rem">
+          <span class="party-d mono bold">${c.house.D}<span class="mono xs dim"> D</span></span>
+          <span class="party-r mono bold">${c.house.R}<span class="mono xs dim"> R</span></span>
+        </div>
+        <div style="position:relative;height:110px"><canvas id="house-pie"></canvas></div>
+      </div>
+    </div>`;
+
+  setTimeout(()=>{
+    const pieCfg = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'58%'};
+    const sLbl = ['Democrat','Republican',...(c.senate.I?['Independent']:[])];
+    const sDat = [c.senate.D,c.senate.R,...(c.senate.I?[c.senate.I]:[])];
+    rchart('senate-pie',{type:'doughnut',data:{labels:sLbl,datasets:[{data:sDat,
+      backgroundColor:['rgba(26,111,168,.85)','rgba(192,57,43,.85)','rgba(107,63,160,.85)'].slice(0,sDat.length),
+      borderColor:['#1a6fa8','#c0392b','#6b3fa0'].slice(0,sDat.length),borderWidth:1}]},options:pieCfg});
+    rchart('house-pie',{type:'doughnut',data:{labels:['Democrat','Republican'],datasets:[{data:[c.house.D,c.house.R],
+      backgroundColor:['rgba(26,111,168,.85)','rgba(192,57,43,.85)'],
+      borderColor:['#1a6fa8','#c0392b'],borderWidth:1}]},options:pieCfg});
+  },50);
+
+  // ── President situation summary (WHO / WHEN / WHAT / WHY) ──────────────
+  const sit = p.situationSummary || presRecord?.situationSummary || null;
+  const sitEl = document.getElementById('h-pres-situation');
+  if (sitEl) {
+    if (sit) {
+      sitEl.innerHTML = `<div class="card" style="border-left:3px solid var(--gold);margin-top:.5rem;padding:1rem 1.2rem">
+        <div class="mono xs muted mb1" style="letter-spacing:.16em">PRESIDENTIAL SITUATION REPORT</div>
+        ${[['WHO',sit.who],['WHEN',sit.when],['WHAT',sit.what],['WHY',sit.why]].map(([k,v])=>`
+          <div style="display:flex;gap:.7rem;align-items:flex-start;padding:.35rem 0;border-bottom:1px solid var(--border)">
+            <span class="mono" style="font-size:.6rem;font-weight:700;color:var(--gold);min-width:3rem;padding-top:.15rem;letter-spacing:.12em">${k}</span>
+            <span class="sm dim" style="line-height:1.7;flex:1">${v}</span>
+          </div>`).join('')}
+      </div>`;
+    } else {
+      sitEl.innerHTML = '';
+    }
+  }
+
+  // ── 5 most recent timeline events ─────────────────────────────────────────
+  const tlItems = [...(DATA.timeline||[])];
+  // Group by year desc, take first 5
+  const recent5 = tlItems.slice(0,5);
+  document.getElementById('h-events').innerHTML = recent5.map(e=>`
+    <div class="card" style="border-left:3px solid ${e.dot==='major'?'var(--red)':e.dot==='medium'?'var(--amber)':'var(--blue)'};margin-bottom:1px">
+      <div style="display:flex;gap:.75rem;align-items:baseline;margin-bottom:.3rem">
+        <span class="mono xs muted">${e.date}</span>
+        <span style="font-family:'Oswald',sans-serif;font-size:.9rem;font-weight:600;letter-spacing:.08em">${e.title}</span>
+        ${e.dot==='major'?'<span class="tag tag-red" style="margin-left:auto">MAJOR</span>':''}
+      </div>
+      <p class="sm dim" style="line-height:1.65;margin-bottom:.35rem">${e.body}</p>
+      <div class="tl-impact"><span class="muted">IMPACT:</span> ${e.impact}</div>
+      <div class="tl-tagsrow" style="margin-top:.4rem">${(e.tags||[]).map(t=>`<span class="tl-tag">${t.toUpperCase()}</span>`).join('')}</div>
+    </div>`).join('');
+}
+
+function renderPresidents() {
+  const plist = sortPres==='desc'?[...(DATA.presidents||[])].reverse():[...(DATA.presidents||[])];
+  document.getElementById('pres-list').innerHTML = plist.map(p=>`
+    <div class="pres-card mb1" data-search="${p.name.toLowerCase()} ${p.party.toLowerCase()}">
+      <div class="pres-card-head">
+        <div class="pres-card-num">${p.number}</div>
+        <div class="pres-card-portrait">${p.portrait?`<img src="${p.portrait}">`:'NO<br>PORTRAIT'}</div>
+        <div style="flex:1">
+          <div style="font-family:'Oswald',sans-serif;font-size:1.3rem;font-weight:700;letter-spacing:.1em">${p.name}</div>
+          <div class="mono xs dim" style="margin-top:.15rem">${p.party.toUpperCase()} — ${p.term}</div>
+          ${p.ideology?`<div class="mono" style="font-size:.58rem;color:var(--gold);margin-top:.2rem">${p.ideology}</div>`:''}
+          ${p.current?'<span class="live-badge" style="margin-top:.4rem;display:inline-block">● CURRENT</span>':''}
+        </div>
+        <div style="text-align:right;font-family:\'Share Tech Mono\',monospace;font-size:.62rem;min-width:220px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem .75rem;text-align:left">
+            <div><div class="muted" style="font-size:.52rem">VP</div><div class="dim sm">${p.vp||'—'}</div></div>
+            <div><div class="muted" style="font-size:.52rem">BORN</div><div class="dim sm">${p.birthplace||'—'} / ${p.dob||'—'}</div></div>
+            <div><div class="muted" style="font-size:.52rem">SPOUSE</div><div class="dim sm">${p.spouse||'—'}</div></div>
+            <div><div class="muted" style="font-size:.52rem">SEC. STATE</div><div class="dim sm">${p.secState||'—'}</div></div>
+            <div style="grid-column:span 2"><div class="muted" style="font-size:.52rem">PREVIOUS OFFICES</div><div class="dim sm">${(p.prevOffices||[]).join(' → ')}</div></div>
+          </div>
+        </div>
+      </div>
+      ${p.stats?`
+      <div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:.65rem 1.2rem;display:flex;gap:1.5rem;flex-wrap:wrap">
+        ${[['GDP',p.stats.gdp],['JOBS',p.stats.jobs],['DEFICIT',p.stats.deficit],['WAGES',p.stats.wages],['SPENDING',p.stats.spending],['TAX BURD',p.stats.taxBurd]].map(([k,v])=>`
+          <div><div class="mono" style="font-size:.52rem;letter-spacing:.12em;color:var(--mute)">${k}</div>
+          <div class="mono" style="font-size:.78rem;color:${v&&v.startsWith('-')?'var(--red)':'var(--green)'}">${v||'—'}</div></div>`).join('')}
+      </div>`:``}
+      <div class="pres-card-body">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--mute);margin-bottom:.75rem">
+          CONGRESS: ${p.congress||'—'}
+        </div>
+        <div class="g2" style="gap:1.5rem">
+          <div>
+            ${p.bigFive&&p.bigFive.length?`<div class="section-mini"><div class="section-mini-title">5 DEFINING EVENTS</div>${p.bigFive.map((ev,i)=>`<div class="er-row"><span class="mono" style="color:var(--gold);min-width:1.2rem">${i+1}.</span><span>${ev}</span></div>`).join('')}</div>`:''}
+            ${p.policyObjectives&&p.policyObjectives.length?`<div class="section-mini"><div class="section-mini-title">POLICY OBJECTIVES</div>${p.policyObjectives.map(o=>`<div style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--dim);padding:.18rem 0;border-bottom:1px solid var(--border);display:flex;gap:.4rem"><span style="color:var(--gold)">▸</span>${o}</div>`).join('')}</div>`:''}
+            <div class="section-mini"><div class="section-mini-title">ACHIEVEMENTS & MAJOR SUCCESSES</div><p>${p.achievements||'—'}</p></div>
+            <div class="section-mini"><div class="section-mini-title">EXECUTIVE ACTIONS</div><p>${p.executiveActions||'—'}</p></div>
+            <div class="section-mini"><div class="section-mini-title">LEGISLATIVE RECORD</div><p>${p.legislation||'—'}</p></div>
+          </div>
+          <div>
+            <div class="section-mini"><div class="section-mini-title">SCANDALS</div><p style="color:rgba(192,57,43,.85)">${p.scandals||'—'}</p></div>
+            <div class="section-mini"><div class="section-mini-title">LEGACY</div><p>${p.legacy||'—'}</p></div>
+            <div class="section-mini"><div class="section-mini-title">FULL ANALYSIS</div><p>${p.analysis||'—'}</p></div>
+            ${p.cabinetNotes?`<div class="section-mini"><div class="section-mini-title">CABINET NOTES</div><p>${p.cabinetNotes}</p></div>`:''}
+            <div class="section-mini">
+              <div class="section-mini-title">ELECTION RESULTS</div>
+              ${(p.electionResults||[]).length===0?`<div class="mono xs muted">NOT ELECTED — ASSUMED OFFICE VIA SUCCESSION</div>`:''}
+              ${(p.electionResults||[]).map(r=>`
+                <div class="er-row">
+                  <span>${r.year} vs ${r.opponent}</span>
+                  <span class="${r.won?'green':'red'}">${r.won?'✓':'✗'} ${r.evotes}EV (${r.pop})</span>
+                  <span class="muted">${r.opponent}: ${r.opponentVotes}EV (${r.opponentPop})</span>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function filterPres(q) {
+  const t = q.toLowerCase();
+  document.querySelectorAll('#pres-list .pres-card').forEach(el=>{
+    el.style.display = el.dataset.search.includes(t)?'':'none';
+  });
+}
+
+function renderElections() {
+  const elist = sortElec==='desc'?[...(DATA.elections||[])].reverse():[...(DATA.elections||[])];
+  let eHtml = '';
+  elist.forEach((e,ei)=>{
+    const isPres = e.type==='Presidential';
+    const isMid  = !isPres;
+    const eid = `e${e.year}`;
+    eHtml += `<div class="mb2"><div class="elec-year-h">${e.year} — ${e.type}</div>`;
+
+    // Event factor
+    if(e.eventFactor) eHtml += `<div class="card mb1" style="border-left:3px solid var(--amber)"><div class="mono xs muted mb1">CONTEXT & FACTORS</div><p class="sm dim" style="line-height:1.65">${e.eventFactor}</p></div>`;
+
+    if(isPres && e.candidates && e.candidates.length) {
+      // Popular vote summary
+      if(e.popularVote){
+        const pv=e.popularVote;
+        eHtml += `<div class="card mb1"><div class="mono xs muted mb1">POPULAR VOTE — TOTAL CAST: ${pv.totalCast}</div>
+          <div style="display:flex;gap:2rem;flex-wrap:wrap">
+            <div><div class="mono xs muted">WINNER</div><div style="font-family:'Oswald',sans-serif;font-size:1.1rem;color:var(--green)">${pv.winnerName}</div><div class="mono sm green">${pv.winnerPct} — ${pv.winnerRaw} votes</div></div>
+            <div><div class="mono xs muted">RUNNER-UP</div><div style="font-family:'Oswald',sans-serif;font-size:1.1rem;color:var(--dim)">${pv.loserName}</div><div class="mono sm dim">${pv.loserPct} — ${pv.loserRaw} votes</div></div>
+          </div></div>`;
+      }
+      // EC map + candidates
+      eHtml += `<div class="g2 mb1">
+        <div>
+          <div class="mono xs dim mb1">ELECTORAL COLLEGE MAP</div>
+          <div class="ec-map">${e.ecMap?`<img src="${e.ecMap}">`:'<span>NO MAP UPLOADED — UPLOAD VIA ADMIN</span>'}</div>
+        </div>
+        <div>
+          <div class="mono xs dim mb1">CANDIDATES</div>
+          <div class="g2" style="gap:.65rem">
+            ${e.candidates.map(c=>`
+              <div class="cand-card ${c.winner?'cand-winner':''}">
+                <div class="cand-portrait">${c.portrait?`<img src="${c.portrait}">`:`<div style="padding:1rem;font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--mute)">PORTRAIT<br>PENDING<br>${c.name}</div>`}</div>
+                <div style="font-family:'Oswald',sans-serif;font-size:1rem;font-weight:600">${c.name}</div>
+                <div class="mono xs ${c.party==='D'?'party-d':'party-r'}" style="margin-top:.2rem">${c.party==='D'?'DEMOCRAT':'REPUBLICAN'}</div>
+                ${c.runningMate?`<div class="mono" style="font-size:.58rem;color:var(--mute);margin-top:.2rem">VP: ${c.runningMate}</div>`:''}
+                <div style="margin-top:.6rem">
+                  <div class="mono" style="font-size:.55rem;color:var(--mute)">ELECTORAL VOTES</div>
+                  <div style="font-family:'Oswald',sans-serif;font-size:1.6rem;font-weight:700;color:${c.winner?'var(--green)':'var(--dim)'}">${c.evotes}</div>
+                  <div class="mono xs dim">POPULAR: ${c.popular}</div>
+                </div>
+                ${c.background?`<div class="mono" style="font-size:.56rem;color:var(--mute);margin-top:.5rem;line-height:1.5">${c.background}</div>`:''}
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+      // Polling chart
+      if(e.polling&&e.polling.length){
+        eHtml += `<div class="chart-wrap mb1"><div class="chart-title">POLLING TREND — ${e.year}</div><canvas id="${eid}-poll" height="160"></canvas></div>`;
+      }
+      // Primary results
+      if(e.primary){
+        eHtml += `<div class="g2 mb1" style="gap:.75rem">`;
+        if(e.primary.gop) eHtml += `<div class="card"><div class="mono xs red mb1">REPUBLICAN PRIMARY — DELEGATES</div><table class="atbl">${e.primary.gop.map(r=>`<tr><td>${r.name}</td><td class="mono red bold">${r.delegates}</td></tr>`).join('')}</table></div>`;
+        if(e.primary.dem) eHtml += `<div class="card"><div class="mono xs blue mb1">DEMOCRATIC PRIMARY — DELEGATES</div><table class="atbl">${e.primary.dem.map(r=>`<tr><td>${r.name}</td><td class="mono blue bold">${r.delegates}</td></tr>`).join('')}</table></div>`;
+        eHtml += `</div>`;
+      }
+    } else if(isMid) {
+      // Midterm: show congress composition instead of EC map
+      eHtml += `<div class="g2 mb1"><div class="card"><div class="mono xs dim mb1">CONGRESS COMPOSITION AFTER ELECTION</div>
+        <div class="g2" style="gap:1rem"><div>
+          <div class="mono xs muted">SENATE</div><div class="congress-tbl-wrap"><table class="congress-tbl"><tr><th>PARTY</th><th>SEATS</th></tr>
+          <tr><td class="party-d">Democrat</td><td class="party-d bold">${e.senateD||'—'}</td></tr>
+          <tr><td class="party-r">Republican</td><td class="party-r bold">${e.senateR||'—'}</td></tr></table></div>
+          <div class="mono xs muted" style="margin-top:.75rem">HOUSE</div>
+          <table class="congress-tbl"><tr><th>PARTY</th><th>SEATS</th></tr>
+          <tr><td class="party-d">Democrat</td><td class="party-d bold">${e.houseD||'—'}</td></tr>
+          <tr><td class="party-r">Republican</td><td class="party-r bold">${e.houseR||'—'}</td></tr></table>
+        </div>
+        <div style="height:180px"><canvas id="${eid}-comp"></canvas></div></div>
+      </div><div class="chart-wrap"><div class="chart-title">HOUSE COMPOSITION</div><canvas id="${eid}-house" height="180"></canvas></div></div>`;
+    }
+
+    // Election results note (renamed from Congressional Results)
+    eHtml += `<div class="card"><div class="mono xs muted mb1">ELECTION RESULTS</div><p class="sm dim">${e.congressNotes||'—'}</p></div>`;
+    eHtml += `<hr class="dark"></div>`;
+  });
+  document.getElementById('elec-list').innerHTML = eHtml;
+
+  // Draw polling charts
+  elist.forEach(e=>{
+    const eid = `e${e.year}`;
+    if(e.polling&&e.polling.length){
+      const PL = {responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#6b7f8f',font:{family:"'Share Tech Mono',monospace",size:9},boxWidth:10}}},scales:{x:{ticks:{color:'#3d4f5c',font:{size:8}},grid:{color:'rgba(38,48,64,.5)'}},y:{ticks:{color:'#3d4f5c',font:{size:8},callback:v=>v+'%'},grid:{color:'rgba(38,48,64,.5)'},min:30}}};
+      const pData = e.polling;
+      const candidate1 = e.candidates?.[0]?.name?.split(' ').pop()||'Candidate 1';
+      const candidate2 = e.candidates?.[1]?.name?.split(' ').pop()||'Candidate 2';
+      rchart(`${eid}-poll`,{type:'line',data:{
+        labels:pData.map(p=>p.period),
+        datasets:[
+          {label:candidate1,data:pData.map(p=>p.gore??p.sterling??0),borderColor:'#1a6fa8',backgroundColor:'rgba(26,111,168,.1)',tension:.3,pointRadius:3},
+          {label:candidate2,data:pData.map(p=>p.sterling??p.gore??0),borderColor:'#c0392b',backgroundColor:'rgba(192,57,43,.1)',tension:.3,pointRadius:3}
+        ]
+      },options:PL});
+    }
+  });
+}
+
+function renderEconomy() {
+  const e = DATA.economy;
+  const yrs = sortEcon==='desc'
+    ? [...(e.yearly||[])].reverse()
+    : [...(e.yearly||[])];
+
+  document.getElementById('econ-stats').innerHTML = (e.current||[]).map(s=>`
+    <div class="stat stat-${s.color}">
+      <div class="stat-label">${s.label}</div>
+      <div class="stat-value">${s.value}</div>
+      <div class="stat-sub">${s.sub}</div>
+    </div>`).join('');
+
+  // ── Charts (always chronological order) ──────────────────────────────────
+  const allYrs = [...(e.yearly||[])];
+  const labels  = allYrs.map(y => y.year);
+  const CS = {
+    responsive:true, maintainAspectRatio:true,
+    plugins:{ legend:{ labels:{ color:'#6b7f8f', font:{family:"'Share Tech Mono',monospace",size:10}, boxWidth:12 } } },
+    scales:{
+      x:{ ticks:{ color:'#3d4f5c', font:{size:9} }, grid:{ color:'rgba(38,48,64,.5)' } },
+      y:{ ticks:{ color:'#3d4f5c', font:{size:9} }, grid:{ color:'rgba(38,48,64,.5)' } }
+    }
+  };
+
+  // GDP & Debt
+  const gdpNums  = allYrs.map(y=>{ const n=parseFloat((y.gdp||'0').replace(/[$T,B]/g,'')); return y.gdp.includes('T')?n*1000:n; });
+  const debtArr  = [8615,8265,8365,8914,9703,10454,11634,12882,13594];
+  rchart('chart-gdp',{type:'line',data:{labels,datasets:[
+    {label:'GDP ($B)',data:gdpNums,borderColor:'#1a6fa8',backgroundColor:'rgba(26,111,168,.12)',tension:.35,pointRadius:3,pointBackgroundColor:'#1a6fa8'},
+    {label:'Debt ($B)',data:debtArr.slice(0,labels.length),borderColor:'#c0392b',backgroundColor:'rgba(192,57,43,.08)',tension:.35,pointRadius:3,pointBackgroundColor:'#c0392b',borderDash:[4,3]}
+  ]},options:{...CS,scales:{...CS.scales,y:{...CS.scales.y,ticks:{...CS.scales.y.ticks,callback:v=>v>=1000?'$'+(v/1000).toFixed(1)+'T':'$'+v+'B'}}}}});
+
+  // Unemployment
+  const unArr  = allYrs.map(y=>parseFloat(y.unemp)||0);
+  const undArr = [9.6,10.5,11.2,11.5,11.6,11.7,12.3,11.9,11.6];
+  rchart('chart-unemp',{type:'line',data:{labels,datasets:[
+    {label:'Unemployment%',data:unArr,borderColor:'#d4820a',backgroundColor:'rgba(212,130,10,.12)',tension:.35,pointRadius:3,pointBackgroundColor:'#d4820a'},
+    {label:'Underemployment%',data:undArr.slice(0,labels.length),borderColor:'#6b3fa0',backgroundColor:'rgba(107,63,160,.08)',tension:.35,pointRadius:3,pointBackgroundColor:'#6b3fa0',borderDash:[4,3]}
+  ]},options:{...CS,scales:{...CS.scales,y:{...CS.scales.y,ticks:{...CS.scales.y.ticks,callback:v=>v+'%'}}}}});
+
+  // Deficit & Interest
+  const defArr = [-350,-71,100,550,788,751,1180,1248,712];
+  const intArr = [221,208,211,227,263,279,291,297,312];
+  rchart('chart-deficit',{type:'bar',data:{labels,datasets:[
+    {label:'Deficit ($B)',data:defArr.slice(0,labels.length),backgroundColor:defArr.slice(0,labels.length).map(v=>v<0?'rgba(26,122,74,.65)':'rgba(192,57,43,.65)'),borderColor:defArr.slice(0,labels.length).map(v=>v<0?'#1a7a4a':'#c0392b'),borderWidth:1},
+    {label:'Interest ($B)',data:intArr.slice(0,labels.length),type:'line',borderColor:'#b8922a',backgroundColor:'transparent',tension:.35,pointRadius:3,pointBackgroundColor:'#b8922a'}
+  ]},options:{...CS}});
+
+  // Inflation & Defense/GDP
+  const infArr = [2.2,2.8,1.6,3.8,3.5,0.8,1.1,-0.4,1.4];
+  const defGDP = [3.07,3.03,3.35,3.40,5.06,4.97,4.33,4.09,4.04];
+  rchart('chart-inflation',{type:'line',data:{labels,datasets:[
+    {label:'Inflation CPI%',data:infArr.slice(0,labels.length),borderColor:'#0e8585',backgroundColor:'rgba(14,133,133,.1)',tension:.35,pointRadius:3,pointBackgroundColor:'#0e8585'},
+    {label:'Defense/GDP%',data:defGDP.slice(0,labels.length),borderColor:'#d4820a',backgroundColor:'rgba(212,130,10,.08)',tension:.35,pointRadius:3,pointBackgroundColor:'#d4820a',borderDash:[4,3]}
+  ]},options:{...CS,scales:{...CS.scales,y:{...CS.scales.y,ticks:{...CS.scales.y.ticks,callback:v=>v+'%'}}}}});
+
+  // ── Spending breakdown pie ────────────────────────────────────────────────
+  if(e.spendingBreakdown&&e.spendingBreakdown.length){
+    const spTot=e.spendingBreakdown.reduce((a,s)=>a+s.value,0);
+    rchart('chart-spend-pie',{type:'doughnut',data:{
+      labels:e.spendingBreakdown.map(s=>s.label),
+      datasets:[{data:e.spendingBreakdown.map(s=>s.value),backgroundColor:e.spendingBreakdown.map(s=>s.color+'bb'),borderColor:e.spendingBreakdown.map(s=>s.color),borderWidth:1}]
+    },options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
+      plugins:{legend:{position:'right',labels:{color:'#6b7f8f',font:{family:"'Share Tech Mono',monospace",size:9},boxWidth:10,padding:4}},
+        tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toFixed(0)+'B ('+(ctx.parsed/spTot*100).toFixed(1)+'%)'}}}}});
+  }
+  if(e.taxBreakdown&&e.taxBreakdown.length){
+    const txTot=e.taxBreakdown.reduce((a,s)=>a+s.value,0);
+    rchart('chart-tax-pie',{type:'doughnut',data:{
+      labels:e.taxBreakdown.map(s=>s.label),
+      datasets:[{data:e.taxBreakdown.map(s=>s.value),backgroundColor:e.taxBreakdown.map(s=>s.color+'bb'),borderColor:e.taxBreakdown.map(s=>s.color),borderWidth:1}]
+    },options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
+      plugins:{legend:{position:'right',labels:{color:'#6b7f8f',font:{family:"'Share Tech Mono',monospace",size:9},boxWidth:10,padding:4}},
+        tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toFixed(0)+'B ('+(ctx.parsed/txTot*100).toFixed(1)+'%)'}}}}});
+  }
+  // ── Tax Revenue vs. Total Spending ────────────────────────────────────────
+  const revArr  = [2819,2577,2410,2539,2595,2642,2655,2879];
+  const spndArr = [2825,2889,2922,3386,3400,3815,3835,3591];
+  rchart('chart-rev-spend',{type:'bar',data:{labels:labels.slice(0,revArr.length),datasets:[
+    {label:'Revenue ($B)',data:revArr.slice(0,labels.length),backgroundColor:'rgba(26,122,74,.6)',borderColor:'#1a7a4a',borderWidth:1},
+    {label:'Spending ($B)',data:spndArr.slice(0,labels.length),backgroundColor:'rgba(192,57,43,.5)',borderColor:'#c0392b',borderWidth:1}
+  ]},options:{...CS,scales:{...CS.scales,y:{...CS.scales.y,ticks:{...CS.scales.y.ticks,callback:v=>'$'+v+'B'}}}}});
+  // ── Debt-to-GDP ───────────────────────────────────────────────────────────
+  const dtgArr = [56.6,55.1,55.3,59.9,63.8,67.5,75.4,85.5,87.6];
+  rchart('chart-debt-gdp',{type:'line',data:{labels,datasets:[
+    {label:'Debt/GDP%',data:dtgArr.slice(0,labels.length),borderColor:'#c0392b',backgroundColor:'rgba(192,57,43,.1)',tension:.35,pointRadius:3,pointBackgroundColor:'#c0392b',fill:true}
+  ]},options:{...CS,scales:{...CS.scales,y:{...CS.scales.y,ticks:{...CS.scales.y.ticks,callback:v=>v+'%'},min:50}}}});
+
+  // ── Yearly table ─────────────────────────────────────────────────────────
+  document.getElementById('econ-yearly').innerHTML = '<table class="congress-tbl" style="width:100%"><tr><th>YEAR</th><th>GDP</th><th>GROWTH</th><th>UNEMP.</th><th>NOTES</th></tr>'
+    + yrs.map(y=>`<tr><td class="mono gold">${y.year}</td><td class="mono">${y.gdp}</td>`
+      +`<td class="mono ${parseFloat(y.growth)<0?'red':parseFloat(y.growth)<2?'amber':'green'}">${y.growth}</td>`
+      +`<td class="mono ${parseFloat(y.unemp)>5.5?'red':parseFloat(y.unemp)>5?'amber':'green'}">${y.unemp}</td>`
+      +`<td class="sm dim">${y.note}</td></tr>`).join('')+'</table>';
+
+  document.getElementById('econ-issues').innerHTML = (e.issues||[]).map(i=>`
+    <div class="issue-card" style="border-left-color:${i.severity==='critical'?'var(--red)':i.severity==='high'?'var(--amber)':'var(--blue)'}">
+      <div class="issue-sev sev-${i.severity}">${i.severity.toUpperCase()} PRIORITY</div>
+      <div style="font-family:'Oswald',sans-serif;font-size:1rem;font-weight:600;letter-spacing:.08em;margin-bottom:.4rem">${i.title}</div>
+      <p class="sm dim" style="line-height:1.65">${i.desc}</p>
+    </div>`).join('');
+}
+
+// Chart helper — destroys old instance before redrawing
+const _ch = {};
+function rchart(id, cfg) {
+  if(_ch[id]){ try{_ch[id].destroy()}catch(x){} delete _ch[id]; }
+  const el = document.getElementById(id);
+  if(!el) return;
+  _ch[id] = new Chart(el.getContext('2d'), cfg);
+}
+
+function renderTimeline(filter) {
+  let items = (!filter||filter==='all')
+    ? [...(DATA.timeline||[])]
+    : (DATA.timeline||[]).filter(e=>(e.tags||[]).includes(filter));
+  // Already ordered newest-first in the data; group by year
+  const yearGroups = {};
+  items.forEach(e => {
+    const yr = e.date.match(/\d{4}/)?.[0] || 'UNKNOWN';
+    if(!yearGroups[yr]) yearGroups[yr] = [];
+    yearGroups[yr].push(e);
+  });
+  const sortedYears = Object.keys(yearGroups).sort((a,b)=>sortTL==='desc'?parseInt(b)-parseInt(a):parseInt(a)-parseInt(b));
+  let html = '';
+  sortedYears.forEach(yr => {
+    html += `<div style="font-family:'Oswald',sans-serif;font-size:1.1rem;font-weight:700;letter-spacing:.15em;color:var(--gold);margin:1.5rem 0 .75rem;padding-bottom:.4rem;border-bottom:1px solid var(--border2)">${yr}</div>`;
+    yearGroups[yr].forEach(e => {
+      html += `<div class="tl-entry">
+      <div class="tl-dot ${e.dot||'minor'}"></div>
+      <div class="tl-date">${e.date.toUpperCase()}</div>
+      <div class="tl-title">${e.title}</div>
+      <div class="tl-body">${e.body}</div>
+      <div class="tl-impact"><span class="muted">IMPACT:</span> ${e.impact}</div>
+      <div class="tl-tagsrow">${(e.tags||[]).map(t=>`<span class="tl-tag">${t.toUpperCase()}</span>`).join('')}</div>
+    </div>`;
+    });
+  });
+  document.getElementById('tl-container').innerHTML = html;
+}
+
+function filterTL(f, btn) {
+  document.querySelectorAll('.fl-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.dataset.filter = f;
+  renderTimeline(f);
+}
+
+function renderWorld() {
+  const w = DATA.world;
+  const s = w.usStatus||{};
+  const rC = {ally:'var(--green)',friendly:'var(--blue)',neutral:'var(--mute)',tense:'var(--amber)',hostile:'var(--red)'};
+  document.getElementById('world-us-overview').innerHTML = `
+    <div class="card">
+      <div class="mono xs muted mb1">U.S. STATUS — ${s.approval||'—'} APPROVAL</div>
+      <div class="g2" style="gap:.7rem;margin-bottom:1rem">
+        <div class="stat stat-red"><div class="stat-label">APPROVAL</div><div class="stat-value" style="font-size:1.4rem">${s.approval||'—'}</div></div>
+        <div class="stat stat-amber"><div class="stat-label">MILITARY</div><div class="stat-value" style="font-size:.9rem;padding-top:.3rem">${s.militaryPosture||'—'}</div></div>
+      </div>
+      <p class="sm dim" style="line-height:1.65">${s.summary||''}</p>
+    </div>
+    <div class="card">
+      <div class="mono xs amber mb1">NATO</div>
+      <p class="sm dim" style="line-height:1.6;margin-bottom:.9rem">${s.nato||''}</p>
+      <div class="mono xs red mb1">UNITED NATIONS</div>
+      <p class="sm dim" style="line-height:1.6">${s.un||''}</p>
+    </div>`;
+
+  const ctries = sortWorld==='desc'?[...(w.countries||[])].sort((a,b)=>b.rel-a.rel):[...(w.countries||[])].sort((a,b)=>a.rel-b.rel);
+  document.getElementById('country-rows').innerHTML = ctries.map((c,i)=>`
+    <div class="country-row" data-country="${c.name.toLowerCase()} ${c.label.toLowerCase()}">
+      <div class="mono xs muted">${String(i+1).padStart(2,'0')}</div>
+      <div style="font-size:1.1rem">${c.flag}</div>
+      <div style="font-family:'Oswald',sans-serif;font-size:.85rem;letter-spacing:.05em">${c.name}</div>
+      <div>
+        <div class="rel-bar"><div class="rel-fill rel-${c.status}" style="width:${c.rel}%"></div></div>
+        <div class="sm dim" style="margin-top:.2rem">${c.notes}</div>
+      </div>
+      <div class="mono xs" style="color:${rC[c.status]||'var(--dim)'}">${c.label}</div>
+      <div class="mono xs" style="color:${rC[c.status]};text-align:right">${c.rel}/100</div>
+    </div>`).join('');
+}
+
+function filterCountries(q) {
+  const t = q.toLowerCase();
+  document.querySelectorAll('#country-rows .country-row').forEach(el=>{
+    el.style.display = el.dataset.country.includes(t)?'':'none';
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  ADMIN — DASHBOARD
+// ════════════════════════════════════════════════════════
+function loadAdminDash() {
+  document.getElementById('d-pres').textContent = (DATA.presidents||[]).length;
+  document.getElementById('d-elec').textContent = (DATA.elections||[]).length;
+  document.getElementById('d-tl').textContent   = (DATA.timeline||[]).length;
+  document.getElementById('d-ctry').textContent = (DATA.world?.countries||[]).length;
+  document.getElementById('d-econ').textContent = (DATA.economy?.yearly||[]).length;
+  document.getElementById('m-year').value  = DATA.meta?.currentYear||'';
+  document.getElementById('m-class').value = DATA.meta?.classification||'';
+}
+
+function saveMeta() {
+  DATA.meta.currentYear      = document.getElementById('m-year').value;
+  DATA.meta.classification   = document.getElementById('m-class').value;
+  showStatus('s-meta','✓ META SAVED','ok');
+}
+
+// ════════════════════════════════════════════════════════
+//  ADMIN — HOME
+// ════════════════════════════════════════════════════════
+function loadAdminHome() {
+  const h = DATA.home;
+  document.getElementById('f-sum-tag').value  = h.summaryTag||'';
+  document.getElementById('f-sum-text').value = h.summary||'';
+  const p = h.president||{};
+  document.getElementById('f-pnum').value    = p.number||'';
+  document.getElementById('f-pname').value   = p.name||'';
+  document.getElementById('f-pparty').value  = p.party||'';
+  document.getElementById('f-pterm').value   = p.term||'';
+  document.getElementById('f-ptags').value   = (p.tags||[]).join(', ');
+  const c = h.congress||{};
+  document.getElementById('f-clabel').value = c.label||'';
+  document.getElementById('f-sd').value = c.senate?.D||'';
+  document.getElementById('f-sr').value = c.senate?.R||'';
+  document.getElementById('f-si').value = c.senate?.I||'';
+  document.getElementById('f-hd').value = c.house?.D||'';
+  document.getElementById('f-hr').value = c.house?.R||'';
+  document.getElementById('f-events').value = JSON.stringify(h.majorEvents||[], null, 2);
+  document.getElementById('f-macro').value  = JSON.stringify(h.macro||[], null, 2);
+}
+
+function saveHome() {
+  try {
+    DATA.home.summaryTag = document.getElementById('f-sum-tag').value;
+    DATA.home.summary    = document.getElementById('f-sum-text').value;
+    DATA.home.president  = {
+      number: parseInt(document.getElementById('f-pnum').value)||0,
+      name:   document.getElementById('f-pname').value,
+      party:  document.getElementById('f-pparty').value,
+      term:   document.getElementById('f-pterm').value,
+      tags:   document.getElementById('f-ptags').value.split(',').map(t=>t.trim()).filter(Boolean),
+      current:true
+    };
+    const sD = parseInt(document.getElementById('f-sd').value)||0;
+    const sR = parseInt(document.getElementById('f-sr').value)||0;
+    const sI = parseInt(document.getElementById('f-si').value)||0;
+    DATA.home.congress = {
+      label: document.getElementById('f-clabel').value,
+      senate:{ D:sD, R:sR, I:sI, total:100 },
+      house:{ D:parseInt(document.getElementById('f-hd').value)||0, R:parseInt(document.getElementById('f-hr').value)||0, total:435 }
+    };
+    DATA.home.majorEvents = JSON.parse(document.getElementById('f-events').value);
+    DATA.home.macro       = JSON.parse(document.getElementById('f-macro').value);
+    renderHome();
+    persistData();
+    showStatus('s-home','✓ HOME SAVED — ARCHIVE UPDATED','ok');
+  } catch(e) {
+    showStatus('s-home','✗ JSON ERROR: '+e.message,'err');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  ADMIN — PRESIDENTS
+// ════════════════════════════════════════════════════════
+function loadAdminPres() {
+  document.getElementById('pres-acc').innerHTML = (DATA.presidents||[]).map((p,i)=>`
+    <div class="acc-item">
+      <div class="acc-head" onclick="toggleAcc(this)">
+        <div class="acc-htitle">${p.number}. ${p.name} (${p.party})</div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <button class="btn btn-red" style="font-size:.52rem;padding:.25rem .55rem" onclick="event.stopPropagation();removePres(${i})">REMOVE</button>
+          <span class="acc-arrow">▼</span>
+        </div>
+      </div>
+      <div class="acc-body">
+        <div class="g2" style="gap:1rem;margin-bottom:.9rem">
+          <div>
+            <div class="fg"><label class="fl">NUMBER</label><input type="number" id="pp-num-${i}" value="${p.number}"></div>
+            <div class="fg"><label class="fl">FULL NAME</label><input type="text" id="pp-name-${i}" value="${p.name}"></div>
+            <div class="fg"><label class="fl">PARTY</label><input type="text" id="pp-party-${i}" value="${p.party}"></div>
+            <div class="fg"><label class="fl">TERM</label><input type="text" id="pp-term-${i}" value="${p.term}"></div>
+            <div class="fg"><label class="fl">CURRENT?</label>
+              <select id="pp-cur-${i}"><option value="false" ${!p.current?'selected':''}>NO</option><option value="true" ${p.current?'selected':''}>YES</option></select>
+            </div>
+            <div class="fg"><label class="fl">COLOR ACCENT</label>
+              <select id="pp-col-${i}">
+                ${['red','blue','amber','gold','green','purple'].map(c=>`<option value="${c}" ${p.color===c?'selected':''}>${c.toUpperCase()}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div>
+            <div class="fg"><label class="fl">SEC. STATE</label><input type="text" id="pp-ss-${i}" value="${p.secState||''}"></div>
+            <div class="fg"><label class="fl">SEC. DEFENSE</label><input type="text" id="pp-sd-${i}" value="${p.secDef||''}"></div>
+            <div class="fg">
+              <label class="fl">PORTRAIT IMAGE URL <span style="color:var(--mute);font-size:.55rem">(imgur, etc.)</span></label>
+              <input type="text" id="pp-img-${i}" placeholder="https://i.imgur.com/..." value="${p.portrait&&!p.portrait.startsWith('data:')?p.portrait:''}" oninput="previewImg(this,'pp-prev-${i}')">
+              <img id="pp-prev-${i}" src="${p.portrait&&!p.portrait.startsWith('data:')?p.portrait:''}" style="margin-top:.4rem;max-height:100px;max-width:100%;display:${p.portrait&&!p.portrait.startsWith('data:')?'block':'none'};border:1px solid var(--border)">
+            </div>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">ACHIEVEMENTS</label><textarea id="pp-ach-${i}" rows="3">${p.achievements||''}</textarea></div>
+        <div class="fg"><label class="fl">LEGACY</label><textarea id="pp-leg-${i}" rows="3">${p.legacy||''}</textarea></div>
+        <div class="fg"><label class="fl">SCANDALS</label><textarea id="pp-scan-${i}" rows="3">${p.scandals||''}</textarea></div>
+        <div class="fg"><label class="fl">ANALYSIS</label><textarea id="pp-anal-${i}" rows="3">${p.analysis||''}</textarea></div>
+        <div class="fg"><label class="fl">ELECTION RESULTS (JSON)</label>
+          <p style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--mute);margin-bottom:.4rem">{ year, won, evotes, opponent, opponentVotes, pop, opponentPop }</p>
+          <textarea class="jeditor" id="pp-er-${i}" rows="5">${JSON.stringify(p.electionResults||[],null,2)}</textarea>
+        </div>
+        <button class="btn btn-green" onclick="savePresEntry(${i})">SAVE THIS PRESIDENT</button>
+      </div>
+    </div>`).join('');
+}
+
+function savePresEntry(i) {
+  try {
+    const portraitUrl = document.getElementById(`pp-img-${i}`).value.trim();
+    DATA.presidents[i] = {
+      ...DATA.presidents[i],
+      number:   parseInt(document.getElementById(`pp-num-${i}`).value)||0,
+      name:     document.getElementById(`pp-name-${i}`).value,
+      party:    document.getElementById(`pp-party-${i}`).value,
+      term:     document.getElementById(`pp-term-${i}`).value,
+      current:  document.getElementById(`pp-cur-${i}`).value==='true',
+      color:    document.getElementById(`pp-col-${i}`).value,
+      secState: document.getElementById(`pp-ss-${i}`).value,
+      secDef:   document.getElementById(`pp-sd-${i}`).value,
+      achievements: document.getElementById(`pp-ach-${i}`).value,
+      legacy:       document.getElementById(`pp-leg-${i}`).value,
+      scandals:     document.getElementById(`pp-scan-${i}`).value,
+      analysis:     document.getElementById(`pp-anal-${i}`).value,
+      electionResults: JSON.parse(document.getElementById(`pp-er-${i}`).value),
+      portrait: portraitUrl || DATA.presidents[i].portrait || null,
+    };
+    renderPresidents(); renderHome();
+    persistData();
+    showStatus('s-pres','✓ PRESIDENT SAVED — ARCHIVE UPDATED','ok');
+  } catch(e) { showStatus('s-pres','✗ ERROR: '+e.message,'err'); }
+}
+
+function previewImg(input, previewId) {
+  const url = input.value.trim();
+  const prev = document.getElementById(previewId);
+  if (!prev) return;
+  if (url) { prev.src = url; prev.style.display = 'block'; }
+  else { prev.src = ''; prev.style.display = 'none'; }
+}
+
+function addPres() {
+  DATA.presidents.push({number:DATA.presidents.length+42,name:"New President",party:"Unknown",term:"TBD",portrait:null,current:false,color:"blue",achievements:"",legacy:"",scandals:"",analysis:"",secState:"",secDef:"",electionResults:[]});
+  loadAdminPres();
+}
+
+function removePres(i) {
+  if(!confirm('Remove this president?')) return;
+  DATA.presidents.splice(i,1);
+  loadAdminPres(); renderPresidents();
+  persistData();
+}
+
+function saveAllPres() { renderPresidents(); renderHome(); persistData(); showStatus('s-pres','✓ ALL SAVED','ok'); }
+
+// ════════════════════════════════════════════════════════
+//  ADMIN — ELECTIONS
+// ════════════════════════════════════════════════════════
+function loadAdminElec() {
+  document.getElementById('elec-acc').innerHTML = (DATA.elections||[]).map((e,i)=>`
+    <div class="acc-item">
+      <div class="acc-head" onclick="toggleAcc(this)">
+        <div class="acc-htitle">${e.year} — ${e.type}</div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <button class="btn btn-red" style="font-size:.52rem;padding:.25rem .55rem" onclick="event.stopPropagation();removeElec(${i})">REMOVE</button>
+          <span class="acc-arrow">▼</span>
+        </div>
+      </div>
+      <div class="acc-body">
+        <div class="g2" style="gap:1rem;margin-bottom:.9rem">
+          <div>
+            <div class="fg"><label class="fl">YEAR</label><input type="number" id="ef-yr-${i}" value="${e.year}"></div>
+            <div class="fg"><label class="fl">TYPE</label>
+              <select id="ef-type-${i}"><option ${e.type==='Presidential'?'selected':''}>Presidential</option><option ${e.type==='Midterm'?'selected':''}>Midterm</option></select>
+            </div>
+            <div class="fg"><label class="fl">CONGRESSIONAL NOTES</label><textarea id="ef-cn-${i}" rows="3">${e.congressNotes||''}</textarea></div>
+          </div>
+          <div>
+            <div class="fg">
+              <label class="fl">EC MAP IMAGE URL <span style="color:var(--mute);font-size:.55rem">(imgur, etc.)</span></label>
+              <input type="text" id="ef-map-${i}" placeholder="https://i.imgur.com/..." value="${e.ecMap&&!e.ecMap.startsWith('data:')?e.ecMap:''}" oninput="previewImg(this,'ef-map-prev-${i}')">
+              <img id="ef-map-prev-${i}" src="${e.ecMap&&!e.ecMap.startsWith('data:')?e.ecMap:''}" style="margin-top:.4rem;max-height:120px;max-width:100%;display:${e.ecMap&&!e.ecMap.startsWith('data:')?'block':'none'};border:1px solid var(--border)">
+            </div>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">CANDIDATES (JSON)</label>
+          <p style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--mute);margin-bottom:.4rem">{ name, party:"D"|"R", evotes, popular, winner:true|false }</p>
+          <textarea class="jeditor" id="ef-cand-${i}" rows="8">${JSON.stringify((e.candidates||[]).map(c=>({name:c.name,party:c.party,evotes:c.evotes,popular:c.popular,winner:c.winner})),null,2)}</textarea>
+        </div>
+        ${(e.candidates||[]).map((c,ci)=>c.name?`
+          <div class="acard" style="margin-top:.4rem">
+            <div class="acard-title" style="font-size:.7rem">${c.name} — PORTRAIT URL</div>
+            <input type="text" id="ef-cp-${i}-${ci}" placeholder="https://i.imgur.com/..." value="${c.portrait&&!c.portrait.startsWith('data:')?c.portrait:''}" oninput="previewImg(this,'ef-cp-prev-${i}-${ci}')" style="width:100%;margin-bottom:.3rem">
+            <img id="ef-cp-prev-${i}-${ci}" src="${c.portrait&&!c.portrait.startsWith('data:')?c.portrait:''}" style="max-height:100px;max-width:100%;display:${c.portrait&&!c.portrait.startsWith('data:')?'block':'none'};border:1px solid var(--border)">
+          </div>`:'').join('')}
+        <button class="btn btn-green" style="margin-top:.9rem" onclick="saveElecEntry(${i})">SAVE THIS ELECTION</button>
+      </div>
+    </div>`).join('');
+}
+
+function saveElecEntry(i) {
+  try {
+    const newCands = JSON.parse(document.getElementById(`ef-cand-${i}`).value);
+    // preserve portraits
+    newCands.forEach((c,ci)=>{ if(!c.portrait && DATA.elections[i]?.candidates?.[ci]?.portrait) c.portrait=DATA.elections[i].candidates[ci].portrait; });
+    const mapUrl = document.getElementById(`ef-map-${i}`).value.trim();
+    newCands.forEach((c,ci) => {
+      const cpUrl = document.getElementById(`ef-cp-${i}-${ci}`)?.value?.trim();
+      if (cpUrl) c.portrait = cpUrl;
+      else if (!c.portrait && DATA.elections[i]?.candidates?.[ci]?.portrait) {
+        c.portrait = DATA.elections[i].candidates[ci].portrait;
+      }
+    });
+    DATA.elections[i] = { ...DATA.elections[i],
+      year: parseInt(document.getElementById(`ef-yr-${i}`).value)||0,
+      type: document.getElementById(`ef-type-${i}`).value,
+      congressNotes: document.getElementById(`ef-cn-${i}`).value,
+      ecMap: mapUrl || DATA.elections[i].ecMap || null,
+      candidates: newCands
+    };
+    renderElections();
+    persistData();
+    showStatus('s-elec','✓ ELECTION SAVED — ARCHIVE UPDATED','ok');
+  } catch(e) { showStatus('s-elec','✗ ERROR: '+e.message,'err'); }
+}
+
+// uploadMap and uploadCandPortrait removed — images now stored as URLs
+
+function addElec() {
+  DATA.elections.push({year:2008,type:"Presidential",ecMap:null,candidates:[],congressNotes:""});
+  loadAdminElec();
+}
+
+function removeElec(i) {
+  if(!confirm('Remove this election cycle?')) return;
+  DATA.elections.splice(i,1); loadAdminElec(); renderElections();
+  persistData();
+}
+
+function saveAllElec() { renderElections(); persistData(); showStatus('s-elec','✓ ALL SAVED','ok'); }
+
+// ════════════════════════════════════════════════════════
+//  ADMIN — ECONOMY
+// ════════════════════════════════════════════════════════
+function loadAdminEcon() {
+  document.getElementById('f-ecur').value  = JSON.stringify(DATA.economy?.current||[], null, 2);
+  document.getElementById('f-eyear').value = JSON.stringify(DATA.economy?.yearly||[], null, 2);
+  document.getElementById('f-eiss').value  = JSON.stringify(DATA.economy?.issues||[], null, 2);
+}
+
+function saveEcon() {
+  try {
+    DATA.economy.current = JSON.parse(document.getElementById('f-ecur').value);
+    DATA.economy.yearly  = JSON.parse(document.getElementById('f-eyear').value);
+    DATA.economy.issues  = JSON.parse(document.getElementById('f-eiss').value);
+    renderEconomy();
+    persistData();
+    showStatus('s-econ','✓ ECONOMY SAVED — ARCHIVE UPDATED','ok');
+  } catch(e) { showStatus('s-econ','✗ JSON ERROR: '+e.message,'err'); }
+}
+
+// ════════════════════════════════════════════════════════
+//  ADMIN — TIMELINE
+// ════════════════════════════════════════════════════════
+function loadAdminTL() {
+  document.getElementById('tl-acc').innerHTML = (DATA.timeline||[]).map((e,i)=>`
+    <div class="acc-item">
+      <div class="acc-head" onclick="toggleAcc(this)">
+        <div class="acc-htitle">${e.date} — ${e.title}</div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <button class="btn btn-red" style="font-size:.52rem;padding:.25rem .55rem" onclick="event.stopPropagation();removeTL(${i})">REMOVE</button>
+          <span class="acc-arrow">▼</span>
+        </div>
+      </div>
+      <div class="acc-body">
+        <div class="g2" style="gap:1rem">
+          <div>
+            <div class="fg"><label class="fl">DATE</label><input type="text" id="tl-d-${i}" value="${e.date}"></div>
+            <div class="fg"><label class="fl">TITLE</label><input type="text" id="tl-t-${i}" value="${e.title}"></div>
+            <div class="fg"><label class="fl">DOT</label>
+              <select id="tl-dot-${i}"><option ${e.dot==='major'?'selected':''} value="major">MAJOR</option><option ${e.dot==='medium'?'selected':''} value="medium">MEDIUM</option><option ${e.dot==='minor'?'selected':''} value="minor">MINOR</option></select>
+            </div>
+            <div class="fg"><label class="fl">TAGS (comma-sep)</label><input type="text" id="tl-tags-${i}" value="${(e.tags||[]).join(', ')}"></div>
+          </div>
+          <div>
+            <div class="fg"><label class="fl">BODY</label><textarea id="tl-b-${i}" rows="4">${e.body||''}</textarea></div>
+            <div class="fg"><label class="fl">IMPACT</label><textarea id="tl-i-${i}" rows="3">${e.impact||''}</textarea></div>
+          </div>
+        </div>
+        <button class="btn btn-green" onclick="saveTLEntry(${i})">SAVE</button>
+      </div>
+    </div>`).join('');
+}
+
+function saveTLEntry(i) {
+  DATA.timeline[i] = {
+    date:   document.getElementById(`tl-d-${i}`).value,
+    title:  document.getElementById(`tl-t-${i}`).value,
+    dot:    document.getElementById(`tl-dot-${i}`).value,
+    tags:   document.getElementById(`tl-tags-${i}`).value.split(',').map(t=>t.trim()).filter(Boolean),
+    body:   document.getElementById(`tl-b-${i}`).value,
+    impact: document.getElementById(`tl-i-${i}`).value,
+  };
+  renderTimeline();
+  persistData();
+  showStatus('s-tl','✓ EVENT SAVED — ARCHIVE UPDATED','ok');
+}
+
+function showTLForm() {
+  document.getElementById('tl-add-form').style.display='block';
+  document.getElementById('tl-add-form').scrollIntoView({behavior:'smooth'});
+}
+
+function submitTLEvent() {
+  const date  = document.getElementById('tl-date').value;
+  const title = document.getElementById('tl-title').value;
+  if(!date||!title){ showStatus('s-tl','✗ DATE AND TITLE REQUIRED','err'); return; }
+  DATA.timeline.unshift({
+    date, title,
+    dot:    document.getElementById('tl-dot').value,
+    tags:   document.getElementById('tl-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    body:   document.getElementById('tl-body').value,
+    impact: document.getElementById('tl-impact').value,
+  });
+  loadAdminTL(); renderTimeline();
+  persistData();
+  document.getElementById('tl-add-form').style.display='none';
+  // clear form
+  ['tl-date','tl-title','tl-tags','tl-body','tl-impact'].forEach(id=>document.getElementById(id).value='');
+  showStatus('s-tl','✓ EVENT ADDED — ARCHIVE UPDATED','ok');
+}
+
+function removeTL(i) {
+  if(!confirm('Remove this event?')) return;
+  DATA.timeline.splice(i,1); loadAdminTL(); renderTimeline();
+  persistData();
+}
+
+function saveAllTL() { renderTimeline(); persistData(); showStatus('s-tl','✓ ALL SAVED','ok'); }
+
+// ════════════════════════════════════════════════════════
+//  ADMIN — WORLD
+// ════════════════════════════════════════════════════════
+function loadAdminWorld() {
+  const s = DATA.world?.usStatus||{};
+  document.getElementById('w-appr').value = s.approval||'';
+  document.getElementById('w-mil').value  = s.militaryPosture||'';
+  document.getElementById('w-econ').value = s.economicStrength||'';
+  document.getElementById('w-nato').value = s.nato||'';
+  document.getElementById('w-un').value   = s.un||'';
+  document.getElementById('w-sum').value  = s.summary||'';
+  document.getElementById('w-countries').value = JSON.stringify(DATA.world?.countries||[], null, 2);
+}
+
+function saveWorld() {
+  try {
+    DATA.world.usStatus = {
+      ...DATA.world.usStatus,
+      approval:         document.getElementById('w-appr').value,
+      militaryPosture:  document.getElementById('w-mil').value,
+      economicStrength: document.getElementById('w-econ').value,
+      nato:             document.getElementById('w-nato').value,
+      un:               document.getElementById('w-un').value,
+      summary:          document.getElementById('w-sum').value,
+    };
+    DATA.world.countries = JSON.parse(document.getElementById('w-countries').value);
+    renderWorld();
+    persistData();
+    showStatus('s-world','✓ WORLD SAVED — ARCHIVE UPDATED','ok');
+  } catch(e) { showStatus('s-world','✗ JSON ERROR: '+e.message,'err'); }
+}
+
+// ════════════════════════════════════════════════════════
+//  ADMIN — RAW JSON
+// ════════════════════════════════════════════════════════
+function loadAdminRaw() {
+  document.getElementById('raw-json').value = JSON.stringify(DATA, null, 2);
+}
+
+function importRaw() {
+  try {
+    DATA = JSON.parse(document.getElementById('raw-json').value);
+    renderAll();
+    persistData();
+    showStatus('s-raw','✓ DATA IMPORTED — ARCHIVE UPDATED','ok');
+  } catch(e) { showStatus('s-raw','✗ PARSE ERROR: '+e.message,'err'); }
+}
+
+function exportRaw() {
+  navigator.clipboard.writeText(JSON.stringify(DATA, null, 2))
+    .then(()=>showStatus('s-raw','✓ COPIED TO CLIPBOARD','ok'))
+    .catch(()=>{ document.getElementById('raw-json').select(); showStatus('s-raw','SELECT ALL AND COPY MANUALLY','err'); });
+}
+
+function resetData() {
+  if(!confirm('Reset ALL data to defaults? Cannot be undone.')) return;
+  DATA = JSON.parse(JSON.stringify(DEFAULTS));
+  renderAll(); loadAdminRaw();
+  persistData();
+  showStatus('s-raw','✓ RESET TO DEFAULTS','ok');
+}
+
+// ════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadPersistedData();
+  renderAll();
+});
+</script>
+</body>
+</html>
