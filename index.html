@@ -2027,33 +2027,35 @@ function loadAdminRaw() {
   document.getElementById('raw-json').value = JSON.stringify(DATA, null, 2);
 }
 
-function importRaw() {
+async function importRaw() {
   try {
     DATA = JSON.parse(document.getElementById('raw-json').value);
     renderAll();
-    showStatus('s-raw','✓ DATA IMPORTED — ARCHIVE UPDATED','ok');
-  } catch(e) { showStatus('s-raw','✗ PARSE ERROR: '+e.message,'err'); }
+    await saveToCloud();
+    showStatus('s-raw','✓ DATA IMPORTED — SAVED','ok');
+  } catch(e) {
+    showStatus('s-raw','✗ PARSE ERROR: ' + e.message,'err');
+  }
 }
 
-function exportRaw() {
-  navigator.clipboard.writeText(JSON.stringify(DATA, null, 2))
-    .then(()=>showStatus('s-raw','✓ COPIED TO CLIPBOARD','ok'))
-    .catch(()=>{ document.getElementById('raw-json').select(); showStatus('s-raw','SELECT ALL AND COPY MANUALLY','err'); });
-}
-
-function resetData() {
-  if(!confirm('Reset ALL data to defaults? Cannot be undone.')) return;
+async function resetData() {
+  if (!confirm('Reset ALL data to defaults? Cannot be undone.')) return;
   DATA = JSON.parse(JSON.stringify(DEFAULTS));
-  renderAll(); loadAdminRaw();
-  showStatus('s-raw','✓ RESET TO DEFAULTS','ok');
+  renderAll();
+  loadAdminRaw();
+  await saveToCloud();
+  showStatus('s-raw','✓ RESET TO DEFAULTS — SAVED','ok');
 }
 
 // ════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  renderAll();
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadFromCloud();
 });
+
+  window.importRaw = importRaw;
+window.resetData = resetData;
 </script>
 </body>
 </html>
