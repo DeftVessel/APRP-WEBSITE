@@ -8466,7 +8466,8 @@ async function fetchSheetData(silent=false) {
         `${GOV_SHEET_PUBHTML_URL}?_=${Date.now()}`
       ];
       const raw = await fetchTextWithFallback(govUrls);
-      grid = /<table/i.test(raw) ? parseHtmlTableToGrid(raw) : String(raw||'').split(/?
+      grid = /<table/i.test(raw) ? parseHtmlTableToGrid(raw) : String(raw||'').split(/
+?
 /).map(parseCSVLine);
     }
     const hash = JSON.stringify(grid).slice(0,4000);
